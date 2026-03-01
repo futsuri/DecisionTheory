@@ -1,5 +1,5 @@
 ```text
-DecisionTheoryApp/
+DecisionTheory/
 │
 ├─ app/                        # Backend (Flask)
 │   ├─ __init__.py             # Создание Flask-приложения, роуты, подключение MongoDB
