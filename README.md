@@ -1,4 +1,4 @@
-DecisionTheory/
+DecisionTheoryApp/
 │
 ├─ app/                        # Backend (Flask)
 │   ├─ __init__.py             # Создание Flask-приложения, роуты, подключение MongoDB
@@ -8,7 +8,7 @@ DecisionTheory/
 │   ├─ run_service.py          # Логика запуска: валидация, вызов алгоритма, сравнительный анализ (симуляция сценариев), сохранение в MongoDB
 │   ├─ reporter.py             # Генерация отчета (текст + base64-графики)
 │   ├─ utils.py                # Вспомогательные: валидация, графики (Matplotlib), MongoDB-хелперы
-│   └─ db.py                   # Подключение к MongoDB
+│   └─ db.py                   # Подключение к MongoDB (аналог mongo.py в оригинале)
 │
 ├─ frontend/                   # Статический frontend (сервируется Flask'ом)
 │   ├─ css/                    # Стили
