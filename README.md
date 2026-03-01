@@ -1,3 +1,4 @@
+```text
 DecisionTheoryApp/
 │
 ├─ app/                        # Backend (Flask)
@@ -34,3 +35,4 @@ DecisionTheoryApp/
 ├─ requirements.txt            # Зависимости: flask, numpy, scipy, matplotlib, pymongo, pytest
 ├─ README.md                   # Инструкции: как запустить (docker-compose up), добавить алгоритм, тесты
 └─ run.py                      # Локальный запуск без Docker: python run.py
+```text
