@@ -1,0 +1,11 @@
+/* css/input.css */
+.form-wrapper { background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+
+/* css/report.css */
+.report-box {
+  background: white;
+  border-radius: 16px;
+  padding: 2.5rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  line-height: 1.8;
+}

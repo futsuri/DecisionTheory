@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  background: linear-gradient(135deg, #f8fafc, #e0f2fe);
+  color: #1e2937;
+  line-height: 1.6;
+}
+
+header {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+h1 { margin: 0; font-size: 2.2rem; color: #1e40af; }
+.subtitle { color: #64748b; font-size: 1.1rem; }
+
+main { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
+
+footer {
+  text-align: center;
+  padding: 1.5rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+/* Карточки методов */
+.methods-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+.method-card {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem 1.5rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  text-align: center;
+}
+.method-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(30,64,175,0.15);
+}
+.method-card h3 { margin: 0 0 0.5rem; color: #1e40af; }
+
+/* Общие элементы */
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: #64748b;
+  font-size: 1.1rem;
+}
+.error {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 1rem;
+  border-radius: 12px;
+  margin: 1rem 0;
+}

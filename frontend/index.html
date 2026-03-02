@@ -1,24 +1,27 @@
-<!-- frontend/index.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Decision Theory App - Choose Method</title>
-    <link rel="stylesheet" href="css/main.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ТПР — Выбор метода</title>
+  <link rel="stylesheet" href="css/main.css">
+  <script src="js/common.js"></script>
+  <script src="js/main.js" defer></script>
 </head>
 <body>
-    <header>
-        <h1>Choose a Decision Method</h1>
-    </header>
-    <main>
-        <div id="methods-list"></div>
-        <div id="loading">Loading methods...</div>
-        <div id="error" class="error"></div>
-    </main>
-    <script>
-        window.APP_MODE = "mock"; // Change to "real" for backend mode
-    </script>
-    <script src="js/main.js"></script>
+  <header>
+    <h1>Теория Принятия Решений</h1>
+    <p class="subtitle">Выберите метод для расчёта</p>
+  </header>
+
+  <main>
+    <div id="methods-container" class="methods-grid">
+      <!-- заполнит JS -->
+    </div>
+  </main>
+
+  <footer>
+    <p>Режим: <strong id="mode-display">mock</strong></p>
+  </footer>
 </body>
 </html>
