@@ -16,7 +16,9 @@ function load(key, defaultVal = null) {
 // ==================== API ====================
 async function fetchAlgorithms() {
   if (APP_MODE === "mock") {
-    const res = await fetch("mocks/algorithms.json");
+    const url = "https://raw.githubusercontent.com/futsuri/DecisionTheory/vova52/frontend/mocks/algorithms.json";
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to load algorithms: ${res.status}`);
     return await res.json();
   }
   const res = await fetch(`${API_BASE}/api/algorithms`);
