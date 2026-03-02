@@ -1,0 +1,28 @@
+<!-- frontend/input.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decision Theory App - Input Parameters</title>
+    <link rel="stylesheet" href="css/input.css">
+</head>
+<body>
+    <header>
+        <h1>Input Parameters for Method</h1>
+        <p id="method-id"></p>
+    </header>
+    <main>
+        <form id="inputForm">
+            <div id="form-content"></div>
+            <button type="submit">Run Calculation</button>
+        </form>
+        <div id="loading" class="hidden">Calculating...</div>
+        <div id="error" class="error hidden"></div>
+    </main>
+    <script>
+        window.APP_MODE = "mock"; // Change to "real" for backend mode
+    </script>
+    <script src="js/input.js"></script>
+</body>
+</html>
