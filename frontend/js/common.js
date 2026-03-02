@@ -16,7 +16,7 @@ function load(key, defaultVal = null) {
 // ==================== API ====================
 async function fetchAlgorithms() {
   if (APP_MODE === "mock") {
-    const res = await fetch("./mocks/algorithms.json");
+    const res = await fetch("mocks/algorithms.json");
     return await res.json();
   }
   const res = await fetch(`${API_BASE}/api/algorithms`);
