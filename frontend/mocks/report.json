@@ -1,0 +1,3 @@
+{
+    "report_md": "# Пример Отчета\n\nЭто **mock**-отчет для теста.\n\n- Пункт 1\n- Пункт 2\n\n<image-card alt="График" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" ></image-card>"
+}
