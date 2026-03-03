@@ -166,9 +166,74 @@ function renderInputForm(algId, container) {
         });
 
     } else if (algId === "main_criterion") {
-        // ... (оставляем как было раньше или дорабатываем отдельно)
-        inner.innerHTML = `<p>Форма метода главного критерия (без изменений)</p>`;
-    }
+    inner.innerHTML = `
+        <h3>Метод главного критерия</h3>
+
+        <label for="main-crit">Главный критерий (приоритетный):</label>
+        <select id="main-crit">
+            <option value="cost">Стоимость (минимизировать)</option>
+            <option value="quality" selected>Качество (максимизировать)</option>
+            <option value="time">Время выполнения (минимизировать)</option>
+        </select>
+
+        <h4 style="margin-top:1.8rem;">Значения альтернатив</h4>
+        <table class="data-table" id="alternatives-table">
+            <thead>
+                <tr>
+                    <th>Альтернатива</th>
+                    <th>Стоимость</th>
+                    <th>Качество</th>
+                    <th>Время (дни)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><input type="text" value="Вариант A" class="alt-name" /></td>
+                    <td><input type="number" value="150000" step="1000" /></td>
+                    <td><input type="number" value="8.5" step="0.1" min="0" max="10" /></td>
+                    <td><input type="number" value="45" step="1" min="0" /></td>
+                </tr>
+                <tr>
+                    <td><input type="text" value="Вариант B" class="alt-name" /></td>
+                    <td><input type="number" value="120000" step="1000" /></td>
+                    <td><input type="number" value="7.2" step="0.1" min="0" max="10" /></td>
+                    <td><input type="number" value="30" step="1" min="0" /></td>
+                </tr>
+                <tr>
+                    <td><input type="text" value="Вариант C" class="alt-name" /></td>
+                    <td><input type="number" value="180000" step="1000" /></td>
+                    <td><input type="number" value="9.0" step="0.1" min="0" max="10" /></td>
+                    <td><input type="number" value="60" step="1" min="0" /></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <button type="button" id="add-alternative" style="margin-top:1rem; padding:0.6rem 1.2rem;">
+            + Добавить альтернативу
+        </button>
+
+        <p style="margin-top:1.5rem; color:#64748b;">
+            Пороговые ограничения пока не вводим — используем разумные дефолты.
+        </p>
+
+        <button id="submit-btn" class="primary-btn" style="margin-top:1.5rem;">
+            Запустить расчёт
+        </button>
+    `;
+
+    // ─── Добавление новой строки ────────────────────────────────
+    document.getElementById("add-alternative")?.addEventListener("click", () => {
+        const table = document.getElementById("alternatives-table").querySelector("tbody");
+        const newRow = document.createElement("tr");
+        newRow.innerHTML = `
+            <td><input type="text" value="Новый вариант" class="alt-name" /></td>
+            <td><input type="number" value="140000" step="1000" /></td>
+            <td><input type="number" value="7.8" step="0.1" min="0" max="10" /></td>
+            <td><input type="number" value="40" step="1" min="0" /></td>
+        `;
+        table.appendChild(newRow);
+    });
+}
 }
 
 // Обновлённая функция сбора данных для AHP
