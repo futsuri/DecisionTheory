@@ -41,3 +41,50 @@
 .primary-btn:hover {
     background: #1e40af;
 }
+
+.ahp-matrix-table {
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.95rem;
+}
+
+.ahp-matrix-table th,
+.ahp-matrix-table td {
+    border: 1px solid #cbd5e1;
+    padding: 0.6rem 0.9rem;
+    text-align: center;
+    min-width: 80px;
+}
+
+.ahp-matrix-table th {
+    background: #f1f5f9;
+    font-weight: 600;
+}
+
+.ahp-cell {
+    width: 100%;
+    padding: 0.4rem;
+    text-align: center;
+    border: 1px solid #94a3b8;
+    border-radius: 4px;
+    background: #ffffff;
+}
+
+.ahp-cell.diagonal {
+    background: #e2e8f0;
+    font-weight: bold;
+    cursor: not-allowed;
+}
+
+.ahp-cell.mirrored {
+    background: #f8fafc;
+    color: #475569;
+    font-style: italic;
+}
+
+.ahp-cell select {
+    width: 100%;
+    padding: 0.4rem;
+    border: none;
+    background: transparent;
+}

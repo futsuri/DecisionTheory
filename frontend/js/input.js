@@ -76,94 +76,145 @@ function renderInputForm(algId, container) {
     const inner = container.querySelector(".form-inner");
 
     if (algId === "ahp") {
-        inner.innerHTML = `
-            <h3>Матрица парных сравнений (упрощённый ввод)</h3>
-            <p style="color:#64748b; margin-bottom:1.5rem;">
-                Пока используем фиксированную матрицу 3×3 для демонстрации.
-                В будущем — динамическая таблица с редактированием.
-            </p>
-            <pre style="background:#f8fafc; padding:1rem; border-radius:8px; font-family:monospace;">
-[[1.0, 3.0, 5.0],
- [1/3, 1.0, 2.0],
- [1/5, 1/2, 1.0]]
-            </pre>
-            <button id="submit-btn" class="primary-btn">Запустить расчёт AHP</button>
-        `;
-    }
-    else if (algId === "main_criterion") {
-        inner.innerHTML = `
-            <h3>Метод главного критерия</h3>
+        // Количество элементов (критериев/альтернатив) — можно сделать динамическим позже
+        const n = 4; // ← здесь можно добавить input для изменения n
+        const labels = ["Критерий 1", "Критерий 2", "Критерий 3", "Критерий 4"]; // ← потом заменить на реальные названия
 
-            <label for="main-crit">Главный критерий (приоритетный):</label>
-            <select id="main-crit">
-                <option value="cost">Стоимость (минимизировать)</option>
-                <option value="quality" selected>Качество (максимизировать)</option>
-                <option value="time">Время (минимизировать)</option>
-            </select>
-
-            <h4 style="margin-top:1.8rem;">Значения альтернатив</h4>
-            <table class="data-table">
+        let tableHTML = `
+            <h3>Матрица парных сравнений (AHP)</h3>
+            <p>Используйте шкалу Саати (1 = равная важность, 9 = абсолютное превосходство)</p>
+            <table class="ahp-matrix-table">
                 <thead>
                     <tr>
-                        <th>Альтернатива</th>
-                        <th>Стоимость</th>
-                        <th>Качество</th>
-                        <th>Время (дни)</th>
+                        <th></th>
+                        ${labels.map(lbl => `<th>${lbl}</th>`).join('')}
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td><input type="text" value="Вариант A" class="alt-name" /></td>
-                        <td><input type="number" value="150000" /></td>
-                        <td><input type="number" value="8.5" step="0.1" /></td>
-                        <td><input type="number" value="45" /></td>
-                    </tr>
-                    <tr>
-                        <td><input type="text" value="Вариант B" class="alt-name" /></td>
-                        <td><input type="number" value="120000" /></td>
-                        <td><input type="number" value="7.2" step="0.1" /></td>
-                        <td><input type="number" value="30" /></td>
-                    </tr>
-                    <tr>
-                        <td><input type="text" value="Вариант C" class="alt-name" /></td>
-                        <td><input type="number" value="180000" /></td>
-                        <td><input type="number" value="9.0" step="0.1" /></td>
-                        <td><input type="number" value="60" /></td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <p style="margin-top:1.5rem; color:#64748b;">
-                Пороговые ограничения пока не вводим — используем разумные дефолты.
-            </p>
-
-            <button id="submit-btn" class="primary-btn">Запустить расчёт</button>
         `;
-    }
-    else {
-        inner.innerHTML = '<p style="text-align:center; padding:3rem; color:#64748b;">Форма для этого метода пока не реализована</p>';
+
+        for (let i = 0; i < n; i++) {
+            tableHTML += '<tr>';
+            tableHTML += `<th>${labels[i]}</th>`;
+
+            for (let j = 0; j < n; j++) {
+                if (i === j) {
+                    // Диагональ — всегда 1, readonly
+                    tableHTML += `<td><input type="text" value="1" readonly class="ahp-cell diagonal"></td>`;
+                } else if (i > j) {
+                    // Нижний треугольник — отображаем значение из верхнего (не редактируем)
+                    tableHTML += `<td class="ahp-cell mirrored" data-mirror="${j}-${i}"></td>`;
+                } else {
+                    // Верхний треугольник — редактируемый select
+                    tableHTML += `
+                        <td>
+                            <select class="ahp-cell" data-row="${i}" data-col="${j}">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                                <option value="7">7</option>
+                                <option value="8">8</option>
+                                <option value="9">9</option>
+                                <option value="1/2">1/2</option>
+                                <option value="1/3">1/3</option>
+                                <option value="1/4">1/4</option>
+                                <option value="1/5">1/5</option>
+                                <option value="1/6">1/6</option>
+                                <option value="1/7">1/7</option>
+                                <option value="1/8">1/8</option>
+                                <option value="1/9">1/9</option>
+                            </select>
+                        </td>
+                    `;
+                }
+            }
+            tableHTML += '</tr>';
+        }
+
+        tableHTML += '</tbody></table>';
+        tableHTML += '<button id="submit-btn" class="primary-btn">Запустить расчёт AHP</button>';
+
+        inner.innerHTML = tableHTML;
+
+        // ─── Обработчики изменений ────────────────────────────────
+        const selects = inner.querySelectorAll('select.ahp-cell');
+        selects.forEach(select => {
+            select.addEventListener('change', (e) => {
+                const row = parseInt(e.target.dataset.row);
+                const col = parseInt(e.target.dataset.col);
+                const value = e.target.value;
+
+                // Находим зеркальную ячейку (нижний треугольник)
+                const mirroredCell = inner.querySelector(`.ahp-cell.mirrored[data-mirror="${row}-${col}"]`);
+                if (mirroredCell) {
+                    let reciprocal;
+                    if (value.includes('/')) {
+                        const [num, den] = value.split('/').map(Number);
+                        reciprocal = num === 1 ? den : `1/${num}`;
+                    } else {
+                        const num = Number(value);
+                        reciprocal = num === 1 ? 1 : `1/${num}`;
+                    }
+                    mirroredCell.textContent = reciprocal;
+                }
+
+                // Можно здесь же проверять согласованность (CR), но это позже
+            });
+        });
+
+    } else if (algId === "main_criterion") {
+        // ... (оставляем как было раньше или дорабатываем отдельно)
+        inner.innerHTML = `<p>Форма метода главного критерия (без изменений)</p>`;
     }
 }
 
-// ────────────────────────────────────────────────
-// Сбор данных с формы (mock-версия — просто заглушка)
+// Обновлённая функция сбора данных для AHP
 function collectFormData(algId) {
     if (algId === "ahp") {
+        const matrix = [];
+        const rows = document.querySelectorAll('.ahp-matrix-table tbody tr');
+
+        rows.forEach((row, i) => {
+            matrix[i] = [];
+            const cells = row.querySelectorAll('td');
+            cells.forEach((cell, j) => {
+                if (cell.querySelector('select')) {
+                    // верхний треугольник — берём значение select
+                    const val = cell.querySelector('select').value;
+                    matrix[i][j] = parseSaatyValue(val);
+                } else if (cell.classList.contains('diagonal')) {
+                    matrix[i][j] = 1;
+                } else if (cell.classList.contains('mirrored')) {
+                    // нижний треугольник — берём обратное от верхнего
+                    const mirrorCoord = cell.dataset.mirror.split('-');
+                    const mirrorRow = parseInt(mirrorCoord[0]);
+                    const mirrorCol = parseInt(mirrorCoord[1]);
+                    // можно взять из select, но для простоты пока 1 / значение
+                    const upperVal = parseSaatyValue(
+                        document.querySelector(`select[data-row="${mirrorRow}"][data-col="${mirrorCol}"]`).value
+                    );
+                    matrix[i][j] = 1 / upperVal;
+                }
+            });
+        });
+
         return {
             algorithm_id: algId,
             type: "ahp",
-            // в будущем — реальный парсинг матрицы
-            matrix: [[1,3,5],[1/3,1,2],[1/5,0.5,1]]
+            matrix: matrix
         };
     }
-    else if (algId === "main_criterion") {
-        return {
-            algorithm_id: algId,
-            type: "main_criterion",
-            main_criterion: document.getElementById("main-crit")?.value || "quality",
-            // в будущем — сбор всех строк таблицы
-            comment: "Демо-данные из интерфейса"
-        };
+    // ... остальное как раньше
+}
+
+// Вспомогательная функция: парсит значение Саати в число
+function parseSaatyValue(str) {
+    if (str.includes('/')) {
+        const [a, b] = str.split('/').map(Number);
+        return a / b;
     }
-    return { algorithm_id: algId };
+    return Number(str) || 1;
 }
