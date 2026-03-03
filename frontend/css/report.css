@@ -1,0 +1,18 @@
+.report-box {
+    background: white;
+    border-radius: 12px;
+    padding: 2.5rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    line-height: 1.7;
+    font-size: 1.05rem;
+}
+
+.report-box h1, .report-box h2, .report-box h3 {
+    color: #1e40af;
+}
+
+.report-box img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin: 1.5rem 0;
+}
