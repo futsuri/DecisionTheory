@@ -79,3 +79,13 @@ function showError(elementId, msg) {
   const el = document.getElementById(elementId);
   if (el) el.innerHTML = `<div class="error">❌ ${msg}</div>`;
 }
+
+// Возвращает название метода по id (для отображения на input.html)
+function getMethodNameById(id) {
+  const known = {
+    ahp: "Метод анализа иерархий (AHP)",
+    main_criterion: "Метод главного критерия"   // ← добавляем новый id
+    // позже можно загрузить из mocks/algorithms.json динамически
+  };
+  return known[id] || "Неизвестный метод";
+}

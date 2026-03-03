@@ -1,11 +1,43 @@
-/* css/input.css */
-.form-wrapper { background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+.form-inner {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+}
 
-/* css/report.css */
-.report-box {
-  background: white;
-  border-radius: 16px;
-  padding: 2.5rem;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-  line-height: 1.8;
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0 2rem;
+}
+
+.data-table th,
+.data-table td {
+    border: 1px solid #e2e8f0;
+    padding: 0.8rem 1rem;
+    text-align: center;
+}
+
+.data-table input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.primary-btn {
+    background: #1d4ed8;
+    color: white;
+    border: none;
+    padding: 1rem 2.2rem;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.primary-btn:hover {
+    background: #1e40af;
 }
