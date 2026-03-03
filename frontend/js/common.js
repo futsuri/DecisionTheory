@@ -16,10 +16,33 @@ function load(key, defaultVal = null) {
 // ==================== API ====================
 async function fetchAlgorithms() {
   if (APP_MODE === "mock") {
-    const res = await fetch("mocks/algorithms.json");
-    return await res.json();
+    try {
+      // Вариант 1 — самый частый рабочий локально
+      let url = "mocks/algorithms.json";           // без точки и слеша в начале
+
+      // Если не сработает — раскомментируй следующий:
+      // let url = "./mocks/algorithms.json";
+
+      console.log("Пытаемся загрузить методы из:", url);   // ← для отладки
+
+      const res = await fetch(url);
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status} — ${res.statusText}`);
+      }
+
+      const data = await res.json();
+      console.log("Успешно загружено:", data);   // ← увидишь в консоли
+      return data;
+    } catch (err) {
+      console.error("Ошибка загрузки методов:", err);
+      throw err;   // чтобы showError сработал
+    }
   }
+
+  // real mode (не трогаем пока)
   const res = await fetch(`${API_BASE}/api/algorithms`);
+  if (!res.ok) throw new Error("Ошибка загрузки методов");
   return await res.json();
 }
 
