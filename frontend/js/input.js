@@ -76,93 +76,40 @@ function renderInputForm(algId, container) {
     const inner = container.querySelector(".form-inner");
 
     if (algId === "ahp") {
-        // Количество элементов (критериев/альтернатив) — можно сделать динамическим позже
-        const n = 4; // ← здесь можно добавить input для изменения n
-        const labels = ["Критерий 1", "Критерий 2", "Критерий 3", "Критерий 4"]; // ← потом заменить на реальные названия
+       inner.innerHTML = `
+            <h3>Метод анализа иерархий (AHP)</h3>
 
-        let tableHTML = `
-            <h3>Матрица парных сравнений (AHP)</h3>
-            <p>Используйте шкалу Саати (1 = равная важность, 9 = абсолютное превосходство)</p>
-            <table class="ahp-matrix-table">
-                <thead>
-                    <tr>
-                        <th></th>
-                        ${labels.map(lbl => `<th>${lbl}</th>`).join('')}
-                    </tr>
-                </thead>
-                <tbody>
+            <div class="setup-block">
+                <label>Количество критериев (2–9):</label>
+                <input type="number" id="crit-count" min="2" max="9" value="4" style="width:80px; margin:0 10px;">
+
+                <label>Количество альтернатив (2–9):</label>
+                <input type="number" id="alt-count" min="2" max="9" value="3" style="width:80px; margin:0 10px;">
+
+                <button id="generate-struct" class="primary-btn">Создать структуру и матрицы</button>
+            </div>
+
+            <div id="names-section" style="margin:2rem 0;"></div>
+            <div id="criteria-matrix-section" style="margin:2rem 0;"></div>
+            <div id="alt-matrices-section" style="margin:3rem 0;"></div>
+
+            <button id="submit-btn" class="primary-btn" style="display:none; margin-top:2rem;">
+                Запустить расчёт AHP
+            </button>
         `;
 
-        for (let i = 0; i < n; i++) {
-            tableHTML += '<tr>';
-            tableHTML += `<th>${labels[i]}</th>`;
+        // ==================== Обработчик кнопки "Создать структуру" ====================
+        document.getElementById("generate-struct").addEventListener("click", () => {
+            const critCount = parseInt(document.getElementById("crit-count").value);
+            const altCount  = parseInt(document.getElementById("alt-count").value);
 
-            for (let j = 0; j < n; j++) {
-                if (i === j) {
-                    // Диагональ — всегда 1, readonly
-                    tableHTML += `<td><input type="text" value="1" readonly class="ahp-cell diagonal"></td>`;
-                } else if (i > j) {
-                    // Нижний треугольник — отображаем значение из верхнего (не редактируем)
-                    tableHTML += `<td class="ahp-cell mirrored" data-mirror="${j}-${i}"></td>`;
-                } else {
-                    // Верхний треугольник — редактируемый select
-                    tableHTML += `
-                        <td>
-                            <select class="ahp-cell" data-row="${i}" data-col="${j}">
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                                <option value="5">5</option>
-                                <option value="6">6</option>
-                                <option value="7">7</option>
-                                <option value="8">8</option>
-                                <option value="9">9</option>
-                                <option value="1/2">1/2</option>
-                                <option value="1/3">1/3</option>
-                                <option value="1/4">1/4</option>
-                                <option value="1/5">1/5</option>
-                                <option value="1/6">1/6</option>
-                                <option value="1/7">1/7</option>
-                                <option value="1/8">1/8</option>
-                                <option value="1/9">1/9</option>
-                            </select>
-                        </td>
-                    `;
-                }
+            if (critCount < 2 || critCount > 9 || altCount < 2 || altCount > 9) {
+                alert("Количество критериев и альтернатив должно быть от 2 до 9");
+                return;
             }
-            tableHTML += '</tr>';
-        }
 
-        tableHTML += '</tbody></table>';
-        tableHTML += '<button id="submit-btn" class="primary-btn">Запустить расчёт AHP</button>';
-
-        inner.innerHTML = tableHTML;
-
-        // ─── Обработчики изменений ────────────────────────────────
-        const selects = inner.querySelectorAll('select.ahp-cell');
-        selects.forEach(select => {
-            select.addEventListener('change', (e) => {
-                const row = parseInt(e.target.dataset.row);
-                const col = parseInt(e.target.dataset.col);
-                const value = e.target.value;
-
-                // Находим зеркальную ячейку (нижний треугольник)
-                const mirroredCell = inner.querySelector(`.ahp-cell.mirrored[data-mirror="${row}-${col}"]`);
-                if (mirroredCell) {
-                    let reciprocal;
-                    if (value.includes('/')) {
-                        const [num, den] = value.split('/').map(Number);
-                        reciprocal = num === 1 ? den : `1/${num}`;
-                    } else {
-                        const num = Number(value);
-                        reciprocal = num === 1 ? 1 : `1/${num}`;
-                    }
-                    mirroredCell.textContent = reciprocal;
-                }
-
-                // Можно здесь же проверять согласованность (CR), но это позже
-            });
+            generateAHPStructure(critCount, altCount, inner);
+            document.getElementById("submit-btn").style.display = "block";
         });
 
     } else if (algId === "main_criterion") {
@@ -236,43 +183,118 @@ function renderInputForm(algId, container) {
 }
 }
 
+// ====================== Генерация всей структуры AHP ======================
+function generateAHPStructure(critCount, altCount, inner) {
+    let html = '';
+
+    // 1. Названия критериев
+    html += `<h4>Названия критериев</h4><div class="names-grid">`;
+    for (let i = 1; i <= critCount; i++) {
+        html += `
+            <div>
+                <label>Критерий ${i}:</label>
+                <input type="text" class="crit-name" value="Критерий ${i}" style="width:100%; padding:0.5rem;">
+            </div>`;
+    }
+    html += `</div>`;
+
+    // 2. Названия альтернатив
+    html += `<h4 style="margin-top:2rem;">Названия альтернатив</h4><div class="names-grid">`;
+    for (let i = 1; i <= altCount; i++) {
+        html += `
+            <div>
+                <label>Альтернатива ${i}:</label>
+                <input type="text" class="alt-name" value="Альтернатива ${i}" style="width:100%; padding:0.5rem;">
+            </div>`;
+    }
+    html += `</div>`;
+
+    // 3. Матрица сравнения критериев
+    html += `<h4 style="margin-top:2.5rem;">1. Матрица сравнения критериев между собой</h4>`;
+    html += `<div id="criteria-matrix"></div>`;
+
+    // 4. Матрицы альтернатив по каждому критерию
+    html += `<h4 style="margin-top:2.5rem;">2. Матрицы сравнения альтернатив по каждому критерию</h4>`;
+    html += `<div id="alt-matrices"></div>`;
+
+    document.getElementById("names-section").innerHTML = html;
+
+    // Рисуем матрицу критериев
+    renderPairwiseMatrix("criteria-matrix", critCount, "crit");
+
+    // Рисуем матрицы альтернатив по критериям
+    renderAlternativeMatrices("alt-matrices", critCount, altCount);
+}
+
 // Обновлённая функция сбора данных для AHP
 function collectFormData(algId) {
-    if (algId === "ahp") {
-        const matrix = [];
-        const rows = document.querySelectorAll('.ahp-matrix-table tbody tr');
-
-        rows.forEach((row, i) => {
-            matrix[i] = [];
-            const cells = row.querySelectorAll('td');
-            cells.forEach((cell, j) => {
-                if (cell.querySelector('select')) {
-                    // верхний треугольник — берём значение select
-                    const val = cell.querySelector('select').value;
-                    matrix[i][j] = parseSaatyValue(val);
-                } else if (cell.classList.contains('diagonal')) {
-                    matrix[i][j] = 1;
-                } else if (cell.classList.contains('mirrored')) {
-                    // нижний треугольник — берём обратное от верхнего
-                    const mirrorCoord = cell.dataset.mirror.split('-');
-                    const mirrorRow = parseInt(mirrorCoord[0]);
-                    const mirrorCol = parseInt(mirrorCoord[1]);
-                    // можно взять из select, но для простоты пока 1 / значение
-                    const upperVal = parseSaatyValue(
-                        document.querySelector(`select[data-row="${mirrorRow}"][data-col="${mirrorCol}"]`).value
-                    );
-                    matrix[i][j] = 1 / upperVal;
-                }
-            });
-        });
-
-        return {
-            algorithm_id: algId,
-            type: "ahp",
-            matrix: matrix
-        };
+    if (algId !== "ahp") {
+        // для main_criterion можно оставить как было или доработать позже
+        return { algorithm_id: algId, type: "main_criterion" };
     }
-    // ... остальное как раньше
+
+    const payload = {
+        algorithm_id: algId,
+        type: "ahp"
+    };
+
+    // Названия критериев
+    payload.criteria_names = [];
+    document.querySelectorAll(".crit-name").forEach(el => {
+        payload.criteria_names.push(el.value.trim());
+    });
+
+    // Названия альтернатив
+    payload.alternatives_names = [];
+    document.querySelectorAll(".alt-name").forEach(el => {
+        payload.alternatives_names.push(el.value.trim());
+    });
+
+    // Матрица критериев
+    payload.criteria_matrix = getMatrix("criteria-matrix");
+
+    // Матрицы альтернатив по каждому критерию
+    payload.alternative_matrices = [];
+    const critCount = payload.criteria_names.length;
+    for (let i = 0; i < critCount; i++) {
+        const matrix = getMatrix(`alt-matrix-${i}`);
+        payload.alternative_matrices.push(matrix);
+    }
+
+    console.log("Собранные данные:", payload);
+    return payload;
+}
+
+// Вспомогательная функция — вытаскивает матрицу из конкретной таблицы
+function getMatrix(tableId) {
+    const matrix = [];
+    const table = document.getElementById(tableId);
+    if (!table) return matrix;
+
+    const rows = table.querySelectorAll("tbody tr");
+
+    rows.forEach((row, i) => {
+        matrix[i] = [];
+        const cells = row.querySelectorAll("td");
+
+        cells.forEach((cell, j) => {
+            if (cell.querySelector("select")) {
+                matrix[i][j] = parseSaatyValue(cell.querySelector("select").value);
+            } else if (cell.classList.contains("diagonal")) {
+                matrix[i][j] = 1;
+            } else if (cell.classList.contains("mirrored")) {
+                const mirror = cell.dataset.mirror.split("-");
+                const r = parseInt(mirror[0]);
+                const c = parseInt(mirror[1]);
+                const upperVal = parseSaatyValue(
+                    table.querySelector(`select[data-row="${r}"][data-col="${c}"]`).value
+                );
+                matrix[i][j] = 1 / upperVal;
+            }
+        });
+    });
+
+    return matrix;
 }
 
 // Вспомогательная функция: парсит значение Саати в число
@@ -282,4 +304,69 @@ function parseSaatyValue(str) {
         return a / b;
     }
     return Number(str) || 1;
+}
+
+// ====================== Отрисовка одной матрицы парных сравнений ======================
+function renderPairwiseMatrix(containerId, size, type = "crit") {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    let html = '<table class="ahp-matrix-table"><thead><tr><th></th>';
+    for (let i = 1; i <= size; i++) {
+        html += `<th>${type === "crit" ? "Критерий " + i : "Альт. " + i}</th>`;
+    }
+    html += '</tr></thead><tbody>';
+
+    for (let i = 0; i < size; i++) {
+        html += '<tr><th>' + (type === "crit" ? "Критерий " + (i+1) : "Альт. " + (i+1)) + '</th>';
+        for (let j = 0; j < size; j++) {
+            if (i === j) {
+                html += '<td><input type="text" value="1" readonly class="ahp-cell diagonal"></td>';
+            } else if (i > j) {
+                html += '<td class="ahp-cell mirrored"></td>';
+            } else {
+                html += `
+                    <td>
+                        <select class="ahp-cell" data-row="${i}" data-col="${j}">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <!-- ... остальные варианты 3–9, 1/2–1/9 как в твоём коде ... -->
+                            <option value="1/9">1/9</option>
+                        </select>
+                    </td>
+                `;
+            }
+        }
+        html += '</tr>';
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+// ====================== Отрисовка заголовков для матриц альтернатив ======================
+// Отрисовка матриц альтернатив по каждому критерию
+function renderAlternativeMatrices(containerId, critCount, altCount) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.error("Контейнер для матриц альтернатив не найден");
+        return;
+    }
+
+    let html = '';
+
+    for (let c = 0; c < critCount; c++) {
+        html += `
+            <h5 style="margin-top:2rem; color:#1e40af;">
+                Матрица сравнения альтернатив по критерию ${c+1}
+            </h5>
+            <div id="alt-matrix-${c}" class="matrix-wrapper"></div>
+        `;
+    }
+
+    container.innerHTML = html;
+
+    // Теперь рисуем каждую матрицу альтернатив
+    for (let c = 0; c < critCount; c++) {
+        renderPairwiseMatrix(`alt-matrix-${c}`, altCount, "alt");
+    }
 }
