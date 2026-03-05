@@ -267,31 +267,24 @@ function collectFormData(algId) {
 
 // Вспомогательная функция — вытаскивает матрицу из конкретной таблицы
 function getMatrix(tableId) {
+
     const matrix = [];
     const table = document.getElementById(tableId);
-    if (!table) return matrix;
 
     const rows = table.querySelectorAll("tbody tr");
 
     rows.forEach((row, i) => {
-        matrix[i] = [];
-        const cells = row.querySelectorAll("td");
 
-        cells.forEach((cell, j) => {
-            if (cell.querySelector("select")) {
-                matrix[i][j] = parseSaatyValue(cell.querySelector("select").value);
-            } else if (cell.classList.contains("diagonal")) {
-                matrix[i][j] = 1;
-            } else if (cell.classList.contains("mirrored")) {
-                const mirror = cell.dataset.mirror.split("-");
-                const r = parseInt(mirror[0]);
-                const c = parseInt(mirror[1]);
-                const upperVal = parseSaatyValue(
-                    table.querySelector(`select[data-row="${r}"][data-col="${c}"]`).value
-                );
-                matrix[i][j] = 1 / upperVal;
-            }
+        matrix[i] = [];
+
+        const inputs = row.querySelectorAll("input");
+
+        inputs.forEach((input, j) => {
+
+            matrix[i][j] = parseFloat(input.value) || 1;
+
         });
+
     });
 
     return matrix;
@@ -323,16 +316,32 @@ function renderPairwiseMatrix(containerId, size, type = "crit") {
             if (i === j) {
                 html += '<td><input type="text" value="1" readonly class="ahp-cell diagonal"></td>';
             } else if (i > j) {
-                html += '<td class="ahp-cell mirrored"></td>';
+                html += `
+                <td>
+                    <input
+                        type="text"
+                        class="ahp-cell mirror"
+                        data-row="${i}"
+                        data-col="${j}"
+                        data-source="${j}-${i}"
+                        value="1"
+                        readonly
+                    >
+                </td>
+                `;
             } else {
                 html += `
                     <td>
-                        <select class="ahp-cell" data-row="${i}" data-col="${j}">
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <!-- ... остальные варианты 3–9, 1/2–1/9 как в твоём коде ... -->
-                            <option value="1/9">1/9</option>
-                        </select>
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0.001"
+                            class="ahp-cell upper"
+                            data-row="${i}"
+                            data-col="${j}"
+                            data-mirror="${j}-${i}"
+                            value="1"
+                        >
                     </td>
                 `;
             }
@@ -341,6 +350,29 @@ function renderPairwiseMatrix(containerId, size, type = "crit") {
     }
     html += '</tbody></table>';
     container.innerHTML = html;
+    container.querySelectorAll(".upper").forEach(input => {
+
+    input.addEventListener("input", () => {
+
+        const val = parseFloat(input.value);
+
+        if (!val || val <= 0) return;
+
+        const mirrorPos = input.dataset.mirror.split("-");
+        const r = mirrorPos[0];
+        const c = mirrorPos[1];
+
+        const mirrorCell = container.querySelector(
+            `.mirror[data-row="${r}"][data-col="${c}"]`
+        );
+
+        if (mirrorCell) {
+            mirrorCell.value = (1 / val).toFixed(4);
+        }
+
+    });
+
+});
 }
 
 // ====================== Отрисовка заголовков для матриц альтернатив ======================
