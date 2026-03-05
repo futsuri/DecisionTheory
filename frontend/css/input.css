@@ -88,3 +88,10 @@
     border: none;
     background: transparent;
 }
+
+.ahp-matrix-table th {
+    max-width:160px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}

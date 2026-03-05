@@ -224,6 +224,20 @@ function generateAHPStructure(critCount, altCount, inner) {
 
     // Рисуем матрицы альтернатив по критериям
     renderAlternativeMatrices("alt-matrices", critCount, altCount);
+
+    document.querySelectorAll(".crit-name, .alt-name").forEach(input => {
+
+        input.addEventListener("input", () => {
+
+            const critCount = document.querySelectorAll(".crit-name").length;
+            const altCount = document.querySelectorAll(".alt-name").length;
+
+            renderPairwiseMatrix("criteria-matrix", critCount, "crit");
+            renderAlternativeMatrices("alt-matrices", critCount, altCount);
+
+        });
+
+    });
 }
 
 // Обновлённая функция сбора данных для AHP
@@ -299,19 +313,35 @@ function parseSaatyValue(str) {
     return Number(str) || 1;
 }
 
+function getNames(type) {
+
+    if (type === "crit") {
+        return [...document.querySelectorAll(".crit-name")].map(el => el.value || el.placeholder);
+    }
+
+    if (type === "alt") {
+        return [...document.querySelectorAll(".alt-name")].map(el => el.value || el.placeholder);
+    }
+
+    return [];
+}
+
 // ====================== Отрисовка одной матрицы парных сравнений ======================
 function renderPairwiseMatrix(containerId, size, type = "crit") {
+    const names = getNames(type);
     const container = document.getElementById(containerId);
     if (!container) return;
 
     let html = '<table class="ahp-matrix-table"><thead><tr><th></th>';
-    for (let i = 1; i <= size; i++) {
-        html += `<th>${type === "crit" ? "Критерий " + i : "Альт. " + i}</th>`;
+    for (let i = 0; i < size; i++) {
+        const label = names[i] || (type === "crit" ? `Критерий ${i+1}` : `Альтернатива ${i+1}`);
+        html += `<th>${label}</th>`;
     }
     html += '</tr></thead><tbody>';
 
     for (let i = 0; i < size; i++) {
-        html += '<tr><th>' + (type === "crit" ? "Критерий " + (i+1) : "Альт. " + (i+1)) + '</th>';
+        const rowLabel = names[i] || (type === "crit" ? `Критерий ${i+1}` : `Альтернатива ${i+1}`);
+        html += `<tr><th>${rowLabel}</th>`;
         for (let j = 0; j < size; j++) {
             if (i === j) {
                 html += '<td><input type="text" value="1" readonly class="ahp-cell diagonal"></td>';
