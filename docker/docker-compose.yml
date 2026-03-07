@@ -12,7 +12,7 @@ services:
       APP_DEBUG: "0"
       MONGO_URI: mongodb://mongo:27017/decision_theory
     ports:
-      - "8000:8000"
+      - "8080:8000"
     volumes:
       - ..:/app
     depends_on:
