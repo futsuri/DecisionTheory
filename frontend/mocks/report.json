@@ -1,0 +1,3 @@
+{
+  "markdown": "# Отчёт по расчёту\n\n**Метод:** {method}\n**Run ID:** {run_id}\n\n## Результаты\n\n**Лучшая альтернатива:** Вариант A\n**Оценка:** 0.652\n\n**Рейтинг альтернатив:**\n- Вариант A — 0.652\n- Вариант B — 0.248\n- Вариант C — 0.100\n\n![Пример графика](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApaUAAAAASUVORK5CYII=)\n\n> Рекомендация: выбрать **Вариант A** как наиболее приоритетный.\n\n*Дата расчёта: 2026-03-03*"
+}
