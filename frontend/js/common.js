@@ -103,3 +103,19 @@ function getMethodNameById(id) {
   };
   return known[id] || "Неизвестный метод";
 }
+
+// ====================== Навигация по сайту ======================
+
+// переход на главную
+function goHome() {
+    window.location.href = "/";
+}
+
+// переход назад
+function goBack() {
+    if (document.referrer) {
+        window.history.back();
+    } else {
+        goHome();
+    }
+}

@@ -62,3 +62,36 @@ footer {
   border-radius: 12px;
   margin: 1rem 0;
 }
+
+/* ===== Навигация по страницам ===== */
+
+.page-nav{
+  display:flex;
+  gap:10px;
+  margin-bottom:20px;
+}
+
+.nav-btn{
+  background:#f1f5f9;
+  border:1px solid #cbd5e1;
+  padding:6px 12px;
+  border-radius:6px;
+  cursor:pointer;
+  font-size:14px;
+}
+
+.nav-btn:hover{
+  background:#e2e8f0;
+}
+
+.page-nav{
+  display:flex;
+  gap:10px;
+  margin-bottom:20px;
+  padding-bottom:10px;
+  border-bottom:1px solid #e2e8f0;
+}
+
+body{
+    background:#f8fafc;
+}

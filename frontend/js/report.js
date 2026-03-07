@@ -88,3 +88,24 @@ function initChartsIfPresent() {
         console.log("Chart.js график инициализирован");
     }
 }
+
+// ===== Навигационные кнопки =====
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    const backBtn = document.getElementById("btn-back");
+    const homeBtn = document.getElementById("btn-home");
+
+    if (backBtn) {
+        backBtn.addEventListener("click", () => {
+            window.history.back();
+        });
+    }
+
+    if (homeBtn) {
+        homeBtn.addEventListener("click", () => {
+            window.location.href = "/";
+        });
+    }
+
+});

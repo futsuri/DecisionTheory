@@ -37,3 +37,203 @@
 .report-actions a.secondary {
     background: #0f766e;
 }
+
+/* ===== Контейнер отчёта ===== */
+
+#report-content{
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 30px;
+
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+
+    line-height: 1.6;
+}
+
+/* Заголовки отчёта */
+
+#report-content h1,
+#report-content h2,
+#report-content h3{
+    text-align:center;
+    margin-top:1.5em;
+}
+
+/* Таблицы в отчёте */
+
+#report-content table{
+    width:100%;
+    border-collapse:collapse;
+    margin:20px 0;
+}
+
+#report-content th,
+#report-content td{
+    border:1px solid #e2e8f0;
+    padding:8px 10px;
+    text-align:center;
+}
+
+#report-content th{
+    background:#f1f5f9;
+}
+
+/* Кнопки скачивания */
+
+#report-actions{
+    text-align:center;
+    margin-top:20px;
+}
+
+#report-actions a{
+    display:inline-block;
+    margin:0 10px;
+    padding:8px 16px;
+
+    background:#3b82f6;
+    color:white;
+    text-decoration:none;
+
+    border-radius:6px;
+}
+
+#report-actions a.secondary{
+    background:#64748b;
+}
+
+#report-content{
+    overflow-x:auto;
+}
+
+#report-content p{
+    margin:12px 0;
+}
+
+#report-content ul{
+    margin:10px 0 10px 20px;
+}
+
+#report-content code{
+    background:#f1f5f9;
+    padding:2px 6px;
+    border-radius:4px;
+}
+
+/* ===== Общий контейнер отчёта ===== */
+
+#report-content{
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 30px;
+
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+
+    line-height: 1.6;
+    text-align: center;
+}
+
+/* ===== Таблицы в отчёте ===== */
+
+#report-content table{
+    margin: 20px auto;
+    border-collapse: collapse;
+}
+
+#report-content th,
+#report-content td{
+    border: 1px solid #e2e8f0;
+    padding: 8px 12px;
+    text-align: center;
+}
+
+#report-content th{
+    background: #f1f5f9;
+}
+
+/* ===== Графики ===== */
+
+#report-content canvas{
+    display:block;
+    margin: 30px auto;
+}
+
+/* ===== Заголовки ===== */
+
+#report-content h1,
+#report-content h2,
+#report-content h3{
+    text-align: center;
+}
+
+/* ===== Кнопки скачивания ===== */
+
+#report-actions{
+    text-align: center;
+    margin-top: 25px;
+}
+
+#report-actions a{
+    display: inline-block;
+    margin: 0 10px;
+    padding: 8px 16px;
+
+    background: #3b82f6;
+    color: white;
+    text-decoration: none;
+
+    border-radius: 6px;
+}
+
+#report-actions a.secondary{
+    background: #64748b;
+}
+
+/* ===== Центрирование списков ===== */
+
+#report-content ul,
+#report-content ol{
+    list-style-position: inside;
+    text-align: center;
+    padding-left: 0;
+    margin: 20px auto;
+}
+
+/* элементы списка */
+
+#report-content li{
+    text-align: center;
+    margin: 6px 0;
+}
+
+#report-content p{
+    text-align:center;
+}
+
+/* ===== Навигация страницы ===== */
+
+.page-nav{
+    max-width: 900px;
+    margin: 20px auto 10px auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-btn{
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background: #3b82f6;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.nav-btn:hover{
+    background: #2563eb;
+}
