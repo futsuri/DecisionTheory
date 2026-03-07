@@ -119,3 +119,68 @@
 .nav-btn:hover{
     background: #2563eb;
 }
+
+#criteria-matrix table,
+#alt-matrices table {
+    margin: 20px auto;      /* центрируем таблицу */
+    border-collapse: collapse;
+    width: auto;            /* ширина подбирается под содержимое */
+}
+
+#criteria-matrix th,
+#criteria-matrix td,
+#alt-matrices th,
+#alt-matrices td {
+    border: 1px solid #e2e8f0;
+    padding: 8px 12px;
+    text-align: center;     /* содержимое ячеек по центру */
+}
+
+#criteria-matrix th,
+#alt-matrices th {
+    background: #f1f5f9;
+}
+
+.ahp-cell {
+    width: 60px;
+    text-align: center;     /* выравнивание input внутри ячейки */
+}
+
+/* Центрируем заголовки над матрицами альтернатив */
+#alt-matrices h5 {
+    text-align: center;
+    margin-top: 2rem;       /* чтобы был отступ сверху */
+    color: #1e40af;         /* цвет как в отчёте */
+    font-weight: 600;
+}
+
+/* Можно сделать то же самое для матрицы критериев */
+#criteria-matrix h4 {
+    text-align: center;
+    margin-top: 2rem;
+    color: #1e40af;
+    font-weight: 600;
+}
+
+#criteria-matrix,
+#alt-matrices {
+    overflow-x: auto;
+}
+
+.table-wrapper {
+    overflow-x: auto;       /* горизонтальный скролл для каждой таблицы */
+    margin: 10px auto 30px auto;
+    max-width: 100%;
+}
+
+.table-wrapper table {
+    margin: 0 auto;         /* таблица по центру внутри скролла */
+    border-collapse: collapse;
+}
+
+#criteria-matrix th,
+#criteria-matrix td,
+#alt-matrices th,
+#alt-matrices td {
+    text-align: center;
+}

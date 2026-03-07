@@ -272,7 +272,8 @@ function renderPairwiseMatrix(containerId, size, type = "crit") {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    let html = '<table class="ahp-matrix-table"><thead><tr><th></th>';
+    let html = '<div class="table-wrapper">'; // <-- ОБРАБОТКА В SCROLL-КОНТЕЙНЕР
+    html += '<table class="ahp-matrix-table"><thead><tr><th></th>';
     for (let i = 0; i < size; i++) {
         const label = names[i] || (type === "crit" ? `Критерий ${i+1}` : `Альтернатива ${i+1}`);
         html += `<th>${label}</th>`;
@@ -303,9 +304,7 @@ function renderPairwiseMatrix(containerId, size, type = "crit") {
                 html += `
                     <td>
                         <input
-                            type="number"
-                            step="0.01"
-                            min="0.001"
+                            type="text"
                             class="ahp-cell upper"
                             data-row="${i}"
                             data-col="${j}"
@@ -318,31 +317,20 @@ function renderPairwiseMatrix(containerId, size, type = "crit") {
         }
         html += '</tr>';
     }
-    html += '</tbody></table>';
+    html += '</tbody></table></div>'; // <-- ЗАКРЫВАЕМ table-wrapper
     container.innerHTML = html;
+
     container.querySelectorAll(".upper").forEach(input => {
-
-    input.addEventListener("input", () => {
-
-        const val = parseFloat(input.value);
-
-        if (!val || val <= 0) return;
-
-        const mirrorPos = input.dataset.mirror.split("-");
-        const r = mirrorPos[0];
-        const c = mirrorPos[1];
-
-        const mirrorCell = container.querySelector(
-            `.mirror[data-row="${r}"][data-col="${c}"]`
-        );
-
-        if (mirrorCell) {
-            mirrorCell.value = (1 / val).toFixed(10);
-        }
-
+        input.addEventListener("input", () => {
+            const val = parseFloat(input.value);
+            if (!val || val <= 0) return;
+            const mirrorPos = input.dataset.mirror.split("-");
+            const r = mirrorPos[0];
+            const c = mirrorPos[1];
+            const mirrorCell = container.querySelector(`.mirror[data-row="${r}"][data-col="${c}"]`);
+            if (mirrorCell) mirrorCell.value = (1 / val).toFixed(10);
+        });
     });
-
-});
 }
 
 // ====================== Отрисовка заголовков для матриц альтернатив ======================
