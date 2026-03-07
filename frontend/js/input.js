@@ -50,7 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 statusEl.innerHTML = '<div style="color:#10b981; font-weight:500;">Расчёт запущен! Переходим к отчёту...</div>';
                 setTimeout(() => {
-                    window.location.href = "report.html";
+                    window.location.href = "/report";
                 }, 1200);
             } catch (err) {
                 showError("status", "Ошибка: " + err.message);
@@ -64,7 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
 function getMethodNameById(id) {
     const map = {
         ahp: "Метод анализа иерархий (AHP)",
-        main_criterion: "Метод главного критерия"
+        multi_criteria: "Многокритериальная оптимизация"
     };
     return map[id] || `Метод ${id}`;
 }
@@ -112,75 +112,14 @@ function renderInputForm(algId, container) {
             document.getElementById("submit-btn").style.display = "block";
         });
 
-    } else if (algId === "main_criterion") {
-    inner.innerHTML = `
-        <h3>Метод главного критерия</h3>
-
-        <label for="main-crit">Главный критерий (приоритетный):</label>
-        <select id="main-crit">
-            <option value="cost">Стоимость (минимизировать)</option>
-            <option value="quality" selected>Качество (максимизировать)</option>
-            <option value="time">Время выполнения (минимизировать)</option>
-        </select>
-
-        <h4 style="margin-top:1.8rem;">Значения альтернатив</h4>
-        <table class="data-table" id="alternatives-table">
-            <thead>
-                <tr>
-                    <th>Альтернатива</th>
-                    <th>Стоимость</th>
-                    <th>Качество</th>
-                    <th>Время (дни)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><input type="text" value="Вариант A" class="alt-name" /></td>
-                    <td><input type="number" value="150000" step="1000" /></td>
-                    <td><input type="number" value="8.5" step="0.1" min="0" max="10" /></td>
-                    <td><input type="number" value="45" step="1" min="0" /></td>
-                </tr>
-                <tr>
-                    <td><input type="text" value="Вариант B" class="alt-name" /></td>
-                    <td><input type="number" value="120000" step="1000" /></td>
-                    <td><input type="number" value="7.2" step="0.1" min="0" max="10" /></td>
-                    <td><input type="number" value="30" step="1" min="0" /></td>
-                </tr>
-                <tr>
-                    <td><input type="text" value="Вариант C" class="alt-name" /></td>
-                    <td><input type="number" value="180000" step="1000" /></td>
-                    <td><input type="number" value="9.0" step="0.1" min="0" max="10" /></td>
-                    <td><input type="number" value="60" step="1" min="0" /></td>
-                </tr>
-            </tbody>
-        </table>
-
-        <button type="button" id="add-alternative" style="margin-top:1rem; padding:0.6rem 1.2rem;">
-            + Добавить альтернативу
-        </button>
-
-        <p style="margin-top:1.5rem; color:#64748b;">
-            Пороговые ограничения пока не вводим — используем разумные дефолты.
-        </p>
-
-        <button id="submit-btn" class="primary-btn" style="margin-top:1.5rem;">
-            Запустить расчёт
-        </button>
-    `;
-
-    // ─── Добавление новой строки ────────────────────────────────
-    document.getElementById("add-alternative")?.addEventListener("click", () => {
-        const table = document.getElementById("alternatives-table").querySelector("tbody");
-        const newRow = document.createElement("tr");
-        newRow.innerHTML = `
-            <td><input type="text" value="Новый вариант" class="alt-name" /></td>
-            <td><input type="number" value="140000" step="1000" /></td>
-            <td><input type="number" value="7.8" step="0.1" min="0" max="10" /></td>
-            <td><input type="number" value="40" step="1" min="0" /></td>
+    } else if (algId === "multi_criteria") {
+        inner.innerHTML = `
+            <h3>Многокритериальная оптимизация</h3>
+            <p style="margin-top:1.2rem; color:#64748b;">
+                Метод в разработке. Пока доступен только AHP.
+            </p>
         `;
-        table.appendChild(newRow);
-    });
-}
+    }
 }
 
 // ====================== Генерация всей структуры AHP ======================
@@ -243,37 +182,38 @@ function generateAHPStructure(critCount, altCount, inner) {
 // Обновлённая функция сбора данных для AHP
 function collectFormData(algId) {
     if (algId !== "ahp") {
-        // для main_criterion можно оставить как было или доработать позже
-        return { algorithm_id: algId, type: "main_criterion" };
+        return { algorithm_id: algId, input: {} };
+    }
+
+    const criteria = [];
+    document.querySelectorAll(".crit-name").forEach(el => {
+        criteria.push(el.value.trim());
+    });
+
+    const alternatives = [];
+    document.querySelectorAll(".alt-name").forEach(el => {
+        alternatives.push(el.value.trim());
+    });
+
+    const matrix = getMatrix("criteria-matrix");
+
+    const altMatrices = {};
+    const critCount = criteria.length;
+    for (let i = 0; i < critCount; i++) {
+        const critName = criteria[i];
+        const critMatrix = getMatrix(`alt-matrix-${i}`);
+        altMatrices[critName] = critMatrix;
     }
 
     const payload = {
         algorithm_id: algId,
-        type: "ahp"
+        input: {
+            criteria: criteria,
+            alternatives: alternatives,
+            matrix: matrix,
+            alt_matrices: altMatrices
+        }
     };
-
-    // Названия критериев
-    payload.criteria_names = [];
-    document.querySelectorAll(".crit-name").forEach(el => {
-        payload.criteria_names.push(el.value.trim());
-    });
-
-    // Названия альтернатив
-    payload.alternatives_names = [];
-    document.querySelectorAll(".alt-name").forEach(el => {
-        payload.alternatives_names.push(el.value.trim());
-    });
-
-    // Матрица критериев
-    payload.criteria_matrix = getMatrix("criteria-matrix");
-
-    // Матрицы альтернатив по каждому критерию
-    payload.alternative_matrices = [];
-    const critCount = payload.criteria_names.length;
-    for (let i = 0; i < critCount; i++) {
-        const matrix = getMatrix(`alt-matrix-${i}`);
-        payload.alternative_matrices.push(matrix);
-    }
 
     console.log("Собранные данные:", payload);
     return payload;
@@ -397,7 +337,7 @@ function renderPairwiseMatrix(containerId, size, type = "crit") {
         );
 
         if (mirrorCell) {
-            mirrorCell.value = (1 / val).toFixed(4);
+            mirrorCell.value = (1 / val).toFixed(10);
         }
 
     });

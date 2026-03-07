@@ -1,22 +1,30 @@
 version: "3.8"
 
 services:
-  api:
+  backend:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: decision_api
+    container_name: decision_backend
     restart: unless-stopped
     environment:
       APP_ENV: docker
       APP_DEBUG: "0"
-      MONGO_URI: mongodb://mongo:27017
-      MONGO_DB_NAME: decision_theory
+      MONGO_URI: mongodb://mongo:27017/decision_theory
     ports:
       - "8000:8000"
+    volumes:
+      - ..:/app
     depends_on:
       mongo:
         condition: service_healthy
+    command: ["gunicorn", "-b", "0.0.0.0:8000", "-w", "2", "--timeout", "120", "--reload", "run:app"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   mongo:
     image: mongo:7

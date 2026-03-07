@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.log("DOMContentLoaded → загружаем отчёт");
 
     const contentEl = document.getElementById("report-content");
+    const actionsEl = document.getElementById("report-actions");
 
     if (!contentEl) {
         console.error("Элемент #report-content не найден");
@@ -39,6 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             // Если в отчёте есть графики Chart.js — инициализируем их
             initChartsIfPresent();
+            renderReportActions(actionsEl, runId, reportData);
         } else {
             contentEl.innerHTML = "<p style='color:#dc2626; text-align:center; padding:2rem;'>" +
                                  "Отчёт не содержит данных (markdown отсутствует)</p>";
@@ -50,6 +52,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         showError("report-content", "Не удалось загрузить отчёт<br>" + err.message);
     }
 });
+
+function renderReportActions(container, runId, reportData) {
+    if (!container) return;
+    const csvUrl = `/api/reports/${runId}/csv`;
+    const pdfUrl = `/api/reports/${runId}/pdf`;
+
+    container.innerHTML = `
+        <a href="${csvUrl}" download>Скачать CSV</a>
+        <a href="${pdfUrl}" class="secondary" download>Скачать PDF</a>
+    `;
+}
 
 // Простая функция для поиска и инициализации Chart.js графиков (если они есть в markdown)
 function initChartsIfPresent() {

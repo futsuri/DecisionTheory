@@ -32,6 +32,10 @@ def init_db():
     db.jobs.create_index("created_at")
     db.jobs.create_index("method")
     db.jobs.create_index("status")
+    db.runs.create_index("created_at")
+    db.runs.create_index("algorithm_id")
+    db.runs.create_index("status")
+    db.reports.create_index("run_id", unique=True)
     return db
 
 

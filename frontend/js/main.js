@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         // Создаём карточки для каждого метода
-        methods.forEach(method => {
+        methods.filter(method => method.available !== false).forEach(method => {
             const card = document.createElement("div");
             card.classList.add("method-card");
 
@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             card.addEventListener("click", () => {
                 save("algorithm_id", method.id);
                 console.log(`Выбран метод: ${method.id} → сохраняем в localStorage`);
-                window.location.href = "input.html";
+                window.location.href = "/input";
             });
 
             container.appendChild(card);

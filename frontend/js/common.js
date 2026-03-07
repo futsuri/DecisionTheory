@@ -1,8 +1,19 @@
 // js/common.js — общая логика
-const APP_MODE = "mock";           // ← поменяй на "real" когда подключишь backend
-const API_BASE = APP_MODE === "mock" ? "" : "http://localhost:5000";
+const APP_MODE = "real";           // "mock" для локальных моков
+const API_BASE = APP_MODE === "mock" ? "" : "";
 
 window.APP_MODE = APP_MODE; // для отладки
+
+// Показать текущий режим в футере, если элемент присутствует
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    const modeEl = document.getElementById("mode-display");
+    if (modeEl) modeEl.textContent = APP_MODE;
+  });
+} else {
+  const modeEl = document.getElementById("mode-display");
+  if (modeEl) modeEl.textContent = APP_MODE;
+}
 
 // ==================== ХРАНИЛИЩЕ ====================
 function save(key, value) {
@@ -55,8 +66,12 @@ async function createRun(payload) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
-  if (!res.ok) throw new Error("Ошибка создания расчёта");
-  return await res.json();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const detail = data.error ? `: ${data.error}` : "";
+    throw new Error(`Ошибка создания расчёта${detail}`);
+  }
+  return data;
 }
 
 async function fetchReport(runId) {
@@ -84,8 +99,7 @@ function showError(elementId, msg) {
 function getMethodNameById(id) {
   const known = {
     ahp: "Метод анализа иерархий (AHP)",
-    main_criterion: "Метод главного критерия"   // ← добавляем новый id
-    // позже можно загрузить из mocks/algorithms.json динамически
+    multi_criteria: "Многокритериальная оптимизация"
   };
   return known[id] || "Неизвестный метод";
 }

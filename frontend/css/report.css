@@ -16,3 +16,24 @@
     border-radius: 8px;
     margin: 1.5rem 0;
 }
+
+.report-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin: 1.5rem 0 0;
+}
+
+.report-actions a {
+    display: inline-block;
+    padding: 0.8rem 1.4rem;
+    border-radius: 8px;
+    background: #1d4ed8;
+    color: #ffffff;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.report-actions a.secondary {
+    background: #0f766e;
+}

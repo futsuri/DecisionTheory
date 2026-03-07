@@ -1,0 +1,15 @@
+section,name,value,value_percent
+meta,algorithm,ahp,
+,,,
+criteria_weights,,,
+criteria_weight,Важно,0.5119463869496927,51.19463869496927
+criteria_weight,Тестировать,0.36013986014151306,36.01398601415131
+criteria_weight,Критерии,0.12791375290879423,12.791375290879422
+,,,
+ranking,,,
+ranking,Дорого,0.6436383459006046,64.36383459006046
+ranking,Богато,0.26108133404359546,26.108133404359545
+ranking,Дешево,0.09528032005580003,9.528032005580004
+,,,
+consistency,cr,0.09366504422028554,
+consistency,is_consistent,True,

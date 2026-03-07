@@ -4,12 +4,12 @@ app/__init__.py — Создание Flask-приложения, роуты, п�
 """
 import os
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_file, send_from_directory
 
 from app.config import Config
 from app.db import close_db, init_db
 from app.reporter import generate_report
-from app.run_service import create_job, get_job, list_jobs, run_job
+from app.run_service import create_run, list_algorithms
 
 
 def create_app(test_config=None):
@@ -29,14 +29,35 @@ def create_app(test_config=None):
     def index():
         return send_from_directory(frontend_dir, "index.html")
 
+    @app.route("/input")
+    def input_page():
+        return send_from_directory(frontend_dir, "input.html")
+
+    @app.route("/report")
+    def report_page():
+        return send_from_directory(frontend_dir, "report.html")
+
     @app.route("/<path:filename>")
     def frontend_static(filename):
         """Отдаёт любой файл из frontend/ (html, css, js)."""
         return send_from_directory(frontend_dir, filename)
 
     # ------------------------------------------------------------------
+    #  Инициализация MongoDB
+    # ------------------------------------------------------------------
+    with app.app_context():
+        try:
+            init_db()
+        except Exception:
+            pass
+
+    # ------------------------------------------------------------------
     #  Health / Readiness
     # ------------------------------------------------------------------
+
+    @app.route("/health", methods=["GET"])
+    def health_root():
+        return jsonify({"status": "ok"})
 
     @app.route("/api/health", methods=["GET"])
     def health():
@@ -51,59 +72,78 @@ def create_app(test_config=None):
             return jsonify({"status": "error", "detail": str(exc)}), 503
 
     # ------------------------------------------------------------------
-    #  Jobs CRUD
+    #  Алгоритмы
     # ------------------------------------------------------------------
 
-    @app.route("/api/v1/jobs", methods=["POST"])
-    def create_job_route():
-        """Создать задачу (method + payload)."""
-        payload = request.get_json(silent=True)
-        try:
-            job = create_job(payload)
-        except ValueError as exc:
-            return jsonify({"error": str(exc)}), 400
-        return jsonify(job), 201
-
-    @app.route("/api/v1/jobs", methods=["GET"])
-    def list_jobs_route():
-        """Список задач с опциональными фильтрами ?method=&status=&limit=."""
-        method = request.args.get("method")
-        status = request.args.get("status")
-        limit = request.args.get("limit", 50, type=int)
-        jobs = list_jobs(method=method, status=status, limit=limit)
-        return jsonify(jobs)
-
-    @app.route("/api/v1/jobs/<job_id>", methods=["GET"])
-    def get_job_route(job_id):
-        """Получить задачу по ID."""
-        job = get_job(job_id)
-        if job is None:
-            return jsonify({"error": "not found"}), 404
-        return jsonify(job)
+    @app.route("/api/algorithms", methods=["GET"])
+    def algorithms_route():
+        return jsonify(list_algorithms())
 
     # ------------------------------------------------------------------
     #  Запуск вычисления
     # ------------------------------------------------------------------
 
-    @app.route("/api/v1/jobs/<job_id>/run", methods=["POST"])
-    def run_job_route(job_id):
-        """Запустить алгоритм для задачи."""
-        result = run_job(job_id)
-        if result is None:
-            return jsonify({"error": "not found"}), 404
-        return jsonify(result)
+    @app.route("/api/runs", methods=["POST"])
+    def create_run_route():
+        """Создать run и запустить алгоритм."""
+        payload = request.get_json(silent=True) or {}
+        algorithm_id = payload.get("algorithm_id")
+        input_data = payload.get("input")
+
+        if not algorithm_id:
+            return jsonify({"error": "'algorithm_id' is required"}), 400
+        if input_data is None or not isinstance(input_data, dict):
+            return jsonify({"error": "'input' must be a JSON object"}), 400
+
+        try:
+            run_id = create_run(algorithm_id, input_data)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception as exc:
+            return jsonify({"error": str(exc)}), 500
+        return jsonify({"run_id": run_id}), 201
 
     # ------------------------------------------------------------------
     #  Отчёт
     # ------------------------------------------------------------------
 
-    @app.route("/api/v1/jobs/<job_id>/report", methods=["GET"])
-    def report_route(job_id):
-        """Сгенерировать отчёт по завершённой задаче."""
-        report = generate_report(job_id)
+    @app.route("/api/reports/<run_id>", methods=["GET"])
+    def report_route(run_id):
+        """Получить отчёт по run_id."""
+        report = generate_report(run_id)
         if report is None:
             return jsonify({"error": "not found"}), 404
         return jsonify(report)
+
+    @app.route("/api/reports/<run_id>/csv", methods=["GET"])
+    def report_csv_route(run_id):
+        """Скачать CSV-отчёт по run_id."""
+        output_dir = app.config.get("REPORT_OUTPUT_DIR", "reports")
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        csv_path = os.path.join(base_dir, output_dir, f"{run_id}.csv")
+        if not os.path.exists(csv_path):
+            return jsonify({"error": "not found"}), 404
+        return send_file(
+            csv_path,
+            as_attachment=True,
+            download_name=f"{run_id}.csv",
+            mimetype="text/csv",
+        )
+
+    @app.route("/api/reports/<run_id>/pdf", methods=["GET"])
+    def report_pdf_route(run_id):
+        """Скачать PDF-отчёт по run_id."""
+        output_dir = app.config.get("REPORT_OUTPUT_DIR", "reports")
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        pdf_path = os.path.join(base_dir, output_dir, f"{run_id}.pdf")
+        if not os.path.exists(pdf_path):
+            return jsonify({"error": "not found"}), 404
+        return send_file(
+            pdf_path,
+            as_attachment=True,
+            download_name=f"{run_id}.pdf",
+            mimetype="application/pdf",
+        )
 
     # ------------------------------------------------------------------
     #  Ошибки

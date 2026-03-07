@@ -12,7 +12,7 @@ class Config:
     TESTING = _get_bool("APP_TESTING", "0")
 
     # MongoDB
-    MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+    MONGO_URI = os.getenv("MONGO_URI", "mongodb://mongo:27017/decision_theory")
     MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "decision_theory")
     MONGO_TIMEOUT_MS = int(os.getenv("MONGO_TIMEOUT_MS", "3000"))
 
@@ -21,3 +21,6 @@ class Config:
 
     # Лимиты
     MAX_PAYLOAD_SIZE_KB = int(os.getenv("MAX_PAYLOAD_SIZE_KB", "512"))
+
+    # Отчеты
+    REPORT_OUTPUT_DIR = os.getenv("REPORT_OUTPUT_DIR", "reports")

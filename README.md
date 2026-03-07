@@ -1,3 +1,51 @@
+# DecisionTheory
+
+Flask-приложение с методами принятия решений (AHP и многокритериальная оптимизация),
+статическим frontend и сохранением результатов в MongoDB. Сейчас доступен только AHP.
+
+## Быстрый запуск (локально)
+
+1. Установите зависимости:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. Убедитесь, что MongoDB доступна (по умолчанию `mongodb://mongo:27017/decision_theory`).
+3. Запустите сервер:
+   ```bash
+   python run.py
+   ```
+4. Откройте `http://localhost:8000`.
+
+## Запуск через Docker
+
+```bash
+docker compose -f docker/docker-compose.yml up --build
+```
+
+Frontend доступен на `http://localhost:8000`.
+
+## API
+
+- `GET /health` → `{"status": "ok"}`
+- `GET /api/algorithms` → список алгоритмов (часть может быть помечена как недоступная)
+- `POST /api/runs` → `{ "algorithm_id": "...", "input": { ... } }`
+- `GET /api/reports/<run_id>` → отчёт в формате markdown
+
+## Экспорт отчётов
+
+После генерации отчёта автоматически создаются файлы:
+
+- `reports/<run_id>.csv`
+- `reports/<run_id>.pdf`
+
+Папка вывода настраивается через `REPORT_OUTPUT_DIR`.
+
+## Структура
+
+- `app/` — backend и алгоритмы
+- `frontend/` — статический интерфейс
+- `docker/` — контейнеризация
+
 ```text
 DecisionTheory/
 │

@@ -1,10 +1,25 @@
 [
   {
     "id": "ahp",
-    "name": "Метод анализа иерархий (AHP)"
+    "name": "Метод анализа иерархий (AHP)",
+    "description": "Попарные сравнения критериев и альтернатив.",
+    "input_schema": {
+      "criteria": "list[str]",
+      "alternatives": "list[str]",
+      "matrix": "list[list[float]]",
+      "alt_matrices": "dict[str, list[list[float]]]"
+    },
+    "available": true
   },
   {
-    "id": "main_criterion",
-    "name": "Метод главного критерия"
+    "id": "multi_criteria",
+    "name": "Многокритериальная оптимизация",
+    "description": "Непрерывные данные и функции полезности для критериев.",
+    "input_schema": {
+      "criteria": "list[{name, weight, func_type, direction, params}]",
+      "constraints": "dict[str, {min, max}]",
+      "main_criterion": "str|None"
+    },
+    "available": false
   }
 ]
