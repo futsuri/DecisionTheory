@@ -237,3 +237,19 @@ h5 {
     width: 100%;
     padding: 0.5rem;
 }
+
+.crit-limit:disabled {
+    border: 2px solid #ef4444 !important;
+    background: #ffebee !important;
+    color: #991b1b;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;  // Firefox
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;  // Chrome, Safari, Edge
+}
