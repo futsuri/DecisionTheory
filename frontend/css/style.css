@@ -1,108 +1,43 @@
-/* ===== Аниме-стиль ===== */
+/* style.css — теперь содержит только очень специфические переопределения, если они нужны */
+
 body {
-    font-family: 'Poppins', sans-serif;
-    background: linear-gradient(120deg, #f0c7ff, #c7f0ff);
-    margin: 0;
-    padding: 0;
-    color: #1f1f2e;
+    font-family: 'Roboto', system-ui, -apple-system, sans-serif;
 }
 
-/* Карточки и формы */
-.form-wrapper, .report-box {
-    background: rgba(255,255,255,0.9);
-    border-radius: 20px;
-    padding: 2rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    transition: transform 0.3s;
+/* Убираем розовые градиенты и анимации подъёма */
+.form-wrapper:hover,
+.report-box:hover {
+    transform: none;
 }
 
-.form-wrapper:hover, .report-box:hover {
-    transform: translateY(-5px);
-}
-
-/* Кнопки */
-button, .primary-btn, .nav-btn, .report-actions a {
-    border-radius: 15px;
-    border: none;
-    padding: 0.6rem 1.4rem;
-    font-weight: 600;
-    font-size: 0.95rem;
-    cursor: pointer;
-    transition: transform 0.2s, background 0.3s;
-    background: linear-gradient(90deg, #ff85d1, #85d1ff);
-    color: white;
-}
-
-button:hover, .primary-btn:hover, .nav-btn:hover, .report-actions a:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+/* Кнопки унифицированы в main.css и input.css — здесь только запасной вариант */
+button, .primary-btn, .nav-btn {
+    border-radius: 10px;
+    transition: all 0.2s ease;
 }
 
 /* Таблицы */
-.table-wrapper {
-    overflow-x: auto;
-    margin: 20px auto;
-}
-
 table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 0 auto;
-    text-align: center;
-    border-radius: 15px;
+    border-radius: 10px;
     overflow: hidden;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-}
-
-th, td {
-    padding: 10px 14px;
-    border: 1px solid rgba(200,200,200,0.3);
+    box-shadow: var(--shadow-sm);
 }
 
 th {
-    background: rgba(255, 200, 255, 0.6);
+    background: var(--color-neutral);
 }
 
-td.mirror {
-    background: rgba(255, 200, 200, 0.4);
-}
-
-/* Заголовки */
-h1, h2, h3, h4, h5 {
+/* Убираем аниме-остатки */
+#algorithm-title,
+#report-title h1 {
+    background: #3b82f6; /* Чуть светлее синий для контраста */
+    color: #ffffff; /* Ярко-белый текст */
+    padding: 1.5rem 2rem; /* Больше отступов */
+    border-radius: 12px;
+    margin: 2rem auto;
+    max-width: 1100px;
+    box-shadow: var(--shadow-sm);
+    font-size: 2.1rem;
+    font-weight: 700;
     text-align: center;
-    margin-top: 1.5em;
-    margin-bottom: 0.5em;
-    color: #ff85d1;
-    text-shadow: 1px 1px 4px rgba(0,0,0,0.2);
 }
-
-/* Навигация */
-.page-nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 1000px;
-    margin: 20px auto;
-}
-
-.nav-btn {
-    background: linear-gradient(90deg, #ff85d1, #85d1ff);
-    color: white;
-}
-
-body {
-    font-family: 'Poppins', sans-serif;
-
-    /* Картинка фоном */
-    background-image: url('../images/bg-anime.jpg'); /* путь к вашей картинке */
-    background-size: cover;       /* картинка занимает весь экран */
-    background-position: center;  /* центрирование картинки */
-    background-repeat: no-repeat;
-    background-attachment: fixed; /* фон не скроллится, создаёт эффект параллакса */
-
-    color: #1f1f2e;
-    margin: 0;
-    padding: 0;
-}
-

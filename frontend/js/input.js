@@ -81,10 +81,10 @@ function renderInputForm(algId, container) {
 
             <div class="setup-block">
                 <label>Количество критериев (2–9):</label>
-                <input type="number" id="crit-count" min="2" max="9" value="4" style="width:80px; margin:0 10px;">
+                <input type="number" id="crit-count" min="2" max="20" value="4" style="width:80px; margin:0 10px;">
 
                 <label>Количество альтернатив (2–9):</label>
-                <input type="number" id="alt-count" min="2" max="9" value="3" style="width:80px; margin:0 10px;">
+                <input type="number" id="alt-count"  min="2" max="20" value="3" style="width:80px; margin:0 10px;">
 
                 <button id="generate-struct" class="primary-btn">Создать структуру и матрицы</button>
             </div>
@@ -103,7 +103,7 @@ function renderInputForm(algId, container) {
             const critCount = parseInt(document.getElementById("crit-count").value);
             const altCount  = parseInt(document.getElementById("alt-count").value);
 
-            if (critCount < 2 || critCount > 9 || altCount < 2 || altCount > 9) {
+            if (critCount < 2 || critCount > 20 || altCount < 2 || altCount > 20) {
                 alert("Количество критериев и альтернатив должно быть от 2 до 9");
                 return;
             }
@@ -127,24 +127,50 @@ function generateAHPStructure(critCount, altCount, inner) {
     let html = '';
 
     // 1. Названия критериев
-    html += `<h4>Названия критериев</h4><div class="names-grid">`;
+    html += `
+        <h4 style="text-align:center; margin: 2.2rem 0 1.2rem; color: var(--color-primary-darker);">
+            Названия критериев
+        </h4>
+        <div class="names-grid crit-grid">
+    `;
+
     for (let i = 1; i <= critCount; i++) {
         html += `
-            <div>
-                <label>Критерий ${i}:</label>
-                <input type="text" class="crit-name" value="Критерий ${i}" style="width:100%; padding:0.5rem;">
-            </div>`;
+            <div class="name-card">
+                <label for="crit-${i-1}">Критерий ${i}</label>
+                <input
+                    type="text"
+                    id="crit-${i-1}"
+                    class="crit-name"
+                    value="Критерий ${i}"
+                    placeholder="Введите название..."
+                >
+            </div>
+        `;
     }
     html += `</div>`;
 
     // 2. Названия альтернатив
-    html += `<h4 style="margin-top:2rem;">Названия альтернатив</h4><div class="names-grid">`;
+    html += `
+        <h4 style="text-align:center; margin: 3rem 0 1.2rem; color: var(--color-primary-darker);">
+            Названия альтернатив
+        </h4>
+        <div class="names-grid alt-grid">
+    `;
+
     for (let i = 1; i <= altCount; i++) {
         html += `
-            <div>
-                <label>Альтернатива ${i}:</label>
-                <input type="text" class="alt-name" value="Альтернатива ${i}" style="width:100%; padding:0.5rem;">
-            </div>`;
+            <div class="name-card">
+                <label for="alt-${i-1}">Альтернатива ${i}</label>
+                <input
+                    type="text"
+                    id="alt-${i-1}"
+                    class="alt-name"
+                    value="Альтернатива ${i}"
+                    placeholder="Введите название..."
+                >
+            </div>
+        `;
     }
     html += `</div>`;
 
@@ -267,22 +293,23 @@ function getNames(type) {
 }
 
 // ====================== Отрисовка одной матрицы парных сравнений ======================
+// ====================== Отрисовка одной матрицы парных сравнений ======================
 function renderPairwiseMatrix(containerId, size, type = "crit") {
     const names = getNames(type);
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    let html = '<div class="table-wrapper">'; // <-- ОБРАБОТКА В SCROLL-КОНТЕЙНЕР
+    let html = '<div class="table-wrapper">';
     html += '<table class="ahp-matrix-table"><thead><tr><th></th>';
     for (let i = 0; i < size; i++) {
         const label = names[i] || (type === "crit" ? `Критерий ${i+1}` : `Альтернатива ${i+1}`);
-        html += `<th>${label}</th>`;
+        html += `<th title="${label}">${label}</th>`;
     }
     html += '</tr></thead><tbody>';
 
     for (let i = 0; i < size; i++) {
         const rowLabel = names[i] || (type === "crit" ? `Критерий ${i+1}` : `Альтернатива ${i+1}`);
-        html += `<tr><th>${rowLabel}</th>`;
+        html += `<tr><th title="${rowLabel}">${rowLabel}</th>`;
         for (let j = 0; j < size; j++) {
             if (i === j) {
                 html += '<td><input type="text" value="1" readonly class="ahp-cell diagonal"></td>';
@@ -317,9 +344,11 @@ function renderPairwiseMatrix(containerId, size, type = "crit") {
         }
         html += '</tr>';
     }
-    html += '</tbody></table></div>'; // <-- ЗАКРЫВАЕМ table-wrapper
+    html += '</tbody></table></div>';  // закрываем table-wrapper
+
     container.innerHTML = html;
 
+    // Обработчики для зеркалирования
     container.querySelectorAll(".upper").forEach(input => {
         input.addEventListener("input", () => {
             const val = parseFloat(input.value);
@@ -328,13 +357,12 @@ function renderPairwiseMatrix(containerId, size, type = "crit") {
             const r = mirrorPos[0];
             const c = mirrorPos[1];
             const mirrorCell = container.querySelector(`.mirror[data-row="${r}"][data-col="${c}"]`);
-            if (mirrorCell) mirrorCell.value = (1 / val).toFixed(10);
+            if (mirrorCell) mirrorCell.value = (1 / val).toFixed(4);
         });
     });
 }
 
-// ====================== Отрисовка заголовков для матриц альтернатив ======================
-// Отрисовка матриц альтернатив по каждому критерию
+// ====================== Отрисовка матриц альтернатив ======================
 function renderAlternativeMatrices(containerId, critCount, altCount) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -346,16 +374,14 @@ function renderAlternativeMatrices(containerId, critCount, altCount) {
 
     for (let c = 0; c < critCount; c++) {
         html += `
-            <h5 style="margin-top:2rem; color:#1e40af;">
-                Матрица сравнения альтернатив по критерию ${c+1}
-            </h5>
-            <div id="alt-matrix-${c}" class="matrix-wrapper"></div>
+            <h5>Матрица сравнения альтернатив по критерию ${c+1}</h5>
+            <div id="alt-matrix-${c}" class="matrix-container"></div>
         `;
     }
 
     container.innerHTML = html;
 
-    // Теперь рисуем каждую матрицу альтернатив
+    // Рендерим каждую матрицу в свой контейнер
     for (let c = 0; c < critCount; c++) {
         renderPairwiseMatrix(`alt-matrix-${c}`, altCount, "alt");
     }
