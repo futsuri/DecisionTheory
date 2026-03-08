@@ -220,3 +220,20 @@ h5 {
     font-size: 1.25rem;
     font-weight: 600;
 }
+
+.data-table th, .data-table td {
+    padding: 0.8rem;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+}
+
+.data-table input {
+    width: 100%;
+    padding: 0.5rem;
+    border: none;
+}
+
+.data-table select {
+    width: 100%;
+    padding: 0.5rem;
+}

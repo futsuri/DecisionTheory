@@ -113,12 +113,42 @@ function renderInputForm(algId, container) {
         });
 
     } else if (algId === "multi_criteria") {
+
         inner.innerHTML = `
-            <h3>Многокритериальная оптимизация</h3>
-            <p style="margin-top:1.2rem; color:#64748b;">
-                Метод в разработке. Пока доступен только AHP.
-            </p>
+            <h3>Метод главного критерия</h3>
+
+            <div class="setup-block" style="margin:1.5rem 0;">
+                <label>Количество переменных (1–5):</label>
+                <input type="number" id="dim-count" min="1" max="5" value="2">
+
+                <label style="margin-left:2rem;">Количество критериев (2–3):</label>
+                <input type="number" id="crit-count" min="2" max="3" value="2">
+
+                <button id="generate-mc-form" class="primary-btn" style="margin-left:2rem;">
+                    Создать форму
+                </button>
+            </div>
+
+            <div id="mc-form-container" style="margin-top:2rem;"></div>
+
+            <button id="submit-btn" class="primary-btn" style="display:none; margin-top:2rem; width:100%;">
+                Запустить оптимизацию
+            </button>
         `;
+
+        // Обработчик кнопки "Создать форму"
+        document.getElementById("generate-mc-form").addEventListener("click", () => {
+            const dim = parseInt(document.getElementById("dim-count").value);
+            const crit = parseInt(document.getElementById("crit-count").value);
+
+            if (dim < 1 || dim > 5 || crit < 2 || crit > 3) {
+                alert("Переменные: 1–5, критерии: 2–3");
+                return;
+            }
+
+            renderMultiCriteriaForm(dim, crit);
+            document.getElementById("submit-btn").style.display = "block";
+        });
     }
 }
 
@@ -207,6 +237,73 @@ function generateAHPStructure(critCount, altCount, inner) {
 
 // Обновлённая функция сбора данных для AHP
 function collectFormData(algId) {
+    if (algId === "multi_criteria") {
+        const dimCount = parseInt(document.getElementById("dim-count").value);
+        const critCount = parseInt(document.getElementById("crit-count").value);
+
+        // Границы переменных
+        const variable_bounds = [];
+        document.querySelectorAll('.var-min').forEach((minInp, i) => {
+            const maxInp = document.querySelectorAll('.var-max')[i];
+            variable_bounds.push([
+                parseFloat(minInp.value) || 0,
+                parseFloat(maxInp.value) || 100
+            ]);
+        });
+
+        // Критерии и ограничения
+        const criteria = [];
+        const constraints = {};
+        let main_criterion = null;
+
+        document.querySelectorAll('.crit-name').forEach((nameInp, idx) => {
+            const name = nameInp.value.trim() || `f${idx+1}`;
+            const func_type = document.querySelectorAll('.crit-func-type')[idx].value;
+            const direction = document.querySelectorAll('.crit-direction')[idx].value;
+
+            // Коэффициенты
+            const coeffs = [];
+            for (let col = 1; col <= dimCount; col++) {
+                const val = parseFloat(document.querySelector(`.crit-coeff[data-row="${idx+1}"][data-col="${col}"]`).value) || 0;
+                coeffs.push(val);
+            }
+
+            criteria.push({
+                name,
+                func_type,
+                direction,
+                params: { coeffs }
+            });
+
+            // Ограничение
+            const limitVal = parseFloat(document.querySelectorAll('.crit-limit')[idx].value);
+            if (!isNaN(limitVal)) {
+                if (direction === 'max') {
+                    constraints[name] = { max: limitVal };
+                } else {
+                    constraints[name] = { min: limitVal };
+                }
+            }
+
+            // Главный критерий
+            if (document.querySelectorAll('.main-crit-check')[idx].checked) {
+                main_criterion = name;
+            }
+        });
+
+        const payload = {
+            algorithm_id: algId,
+            input: {
+                criteria,
+                constraints,
+                main_criterion,
+                variable_bounds
+            }
+        };
+
+        console.log("Payload для метода главного критерия:", payload);
+        return payload;
+    }
     if (algId !== "ahp") {
         return { algorithm_id: algId, input: {} };
     }
@@ -241,7 +338,7 @@ function collectFormData(algId) {
         }
     };
 
-    console.log("Собранные данные:", payload);
+    console.log("Собранные данные для AHP:", payload);
     return payload;
 }
 
@@ -385,4 +482,98 @@ function renderAlternativeMatrices(containerId, critCount, altCount) {
     for (let c = 0; c < critCount; c++) {
         renderPairwiseMatrix(`alt-matrix-${c}`, altCount, "alt");
     }
+}
+
+// Новая функция для рендеринга формы с таблицей
+function renderMultiCriteriaForm(dimCount, critCount) {
+    const container = document.getElementById("mc-form-container");
+    let html = '<h4 style="margin:1.5rem 0 1rem;">Критерии и ограничения</h4>';
+
+    html += '<table class="data-table" style="width:100%;">';
+    html += '<thead><tr>';
+    html += '<th>Название</th>';
+    html += '<th>Тип</th>';
+    html += '<th>Направление</th>';
+    for (let i = 1; i <= dimCount; i++) {
+        html += `<th>x${i}</th>`;
+    }
+    html += '<th>Ограничение</th>';
+    html += '<th>Главный</th>';
+    html += '</tr></thead><tbody>';
+
+    for (let j = 1; j <= critCount; j++) {
+        html += '<tr>';
+        // Название
+        html += `<td><input type="text" class="crit-name" value="f${j}" style="width:100%;"></td>`;
+        // Тип
+        html += `<td><select class="crit-func-type">
+            <option value="linear">Линейная</option>
+            <option value="quadratic">Квадратичная</option>
+            <option value="exponential">Экспоненциальная</option>
+            <option value="logarithmic">Логарифмическая</option>
+        </select></td>`;
+        // Направление
+        html += `<td><select class="crit-direction" data-row="${j}">
+            <option value="max">Максимизация</option>
+            <option value="min">Минимизация</option>
+        </select></td>`;
+        // Коэффициенты
+        for (let i = 1; i <= dimCount; i++) {
+            html += `<td><input type="number" class="crit-coeff" data-row="${j}" data-col="${i}" value="0" step="any"></td>`;
+        }
+        // Ограничение (одно поле, динамически меняется)
+        html += `<td><input type="number" class="crit-limit" data-row="${j}" placeholder="значение" disabled style="width:100%;"></td>`;
+        // Чекбокс "Главный"
+        html += `<td><input type="checkbox" class="main-crit-check" data-row="${j}"></td>`;
+        html += '</tr>';
+    }
+
+    html += '</tbody></table>';
+
+    // Границы переменных (отдельная маленькая таблица)
+    html += '<h4 style="margin:2rem 0 1rem;">Границы переменных</h4>';
+    html += '<table class="data-table" style="width:auto;">';
+    html += '<thead><tr><th>Переменная</th><th>Min</th><th>Max</th></tr></thead><tbody>';
+    for (let i = 1; i <= dimCount; i++) {
+        html += `
+            <tr>
+                <td>x${i}</td>
+                <td><input type="number" class="var-min" value="0"></td>
+                <td><input type="number" class="var-max" value="100"></td>
+            </tr>`;
+    }
+    html += '</tbody></table>';
+
+    container.innerHTML = html;
+
+    // Динамика ограничений и главного критерия
+    const limitInputs = document.querySelectorAll('.crit-limit');
+    const directionSelects = document.querySelectorAll('.crit-direction');
+    const checkMain = document.querySelectorAll('.main-crit-check');
+
+    directionSelects.forEach((sel, idx) => {
+        sel.addEventListener('change', () => {
+            const limitInp = limitInputs[idx];
+            if (sel.value === 'max') {
+                limitInp.placeholder = 'max значение';
+                limitInp.disabled = false;
+            } else {
+                limitInp.placeholder = 'min значение';
+                limitInp.disabled = false;
+            }
+        });
+        // начальное состояние
+        sel.dispatchEvent(new Event('change'));
+    });
+
+    // Только один чекбокс "главный" может быть активен
+    checkMain.forEach(chk => {
+        chk.addEventListener('change', () => {
+            if (chk.checked) {
+                checkMain.forEach(other => {
+                    if (other !== chk) other.checked = false;
+                });
+            }
+        });
+    });
 }

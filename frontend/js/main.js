@@ -12,45 +12,54 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // Показываем индикатор загрузки
+    // Показываем лоадер (можно оставить)
     showLoading("methods-container", "Загрузка методов...");
 
-    try {
-        const methods = await fetchAlgorithms();
-        console.log("Методы успешно получены:", methods);
-
-        // Очищаем контейнер от лоадера
-        container.innerHTML = "";
-
-        if (!Array.isArray(methods) || methods.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color:#64748b; padding:2rem;">Методы не найдены</p>';
-            return;
+    // Вместо загрузки из JSON — сразу задаём список методов
+    const methods = [
+        {
+            id: "ahp",
+            name: "Метод анализа иерархий (AHP)",
+            description: "Попарные сравнения критериев и альтернатив.",
+            available: true
+        },
+        {
+            id: "multi_criteria",
+            name: "Многокритериальная оптимизация",
+            description: "Непрерывные данные и функции полезности для критериев.",
+            available: true
         }
+        // Если захочешь третий метод позже — просто добавь сюда ещё один объект
+    ];
 
-        // Создаём карточки для каждого метода
-        methods.filter(method => method.available !== false).forEach(method => {
-            const card = document.createElement("div");
-            card.classList.add("method-card");
+    // Убираем лоадер
+    container.innerHTML = "";
 
-            card.innerHTML = `
-                <h3>${method.name || "Метод без названия"}</h3>
-                <p style="margin:0.5rem 0 0; color:#64748b;">
-                    ID: <code>${method.id}</code>
-                </p>
-            `;
+    // Если методов нет (маловероятно, но оставляем проверку)
+    if (!Array.isArray(methods) || methods.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#64748b; padding:2rem;">Методы не найдены</p>';
+        return;
+    }
 
-            // Делаем карточку кликабельной
-            card.style.cursor = "pointer";
-            card.addEventListener("click", () => {
-                save("algorithm_id", method.id);
-                console.log(`Выбран метод: ${method.id} → сохраняем в localStorage`);
-                window.location.href = "/input";
-            });
+    // Создаём карточки (улучшенная версия без ID и с описанием)
+    methods.filter(method => method.available !== false).forEach(method => {
+        const card = document.createElement("div");
+        card.classList.add("method-card");
 
-            container.appendChild(card);
+        card.innerHTML = `
+            <h3>${method.name}</h3>
+            <p style="margin:0.6rem 0 0; color:#64748b; font-size:0.95rem;">
+                ${method.description}
+            </p>
+        `;
+
+        card.style.cursor = "pointer";
+        card.addEventListener("click", () => {
+            save("algorithm_id", method.id);
+            console.log(`Выбран метод: ${method.id} → сохраняем в localStorage`);
+            window.location.href = "/input";
         });
 
-    } catch (err) {
-        console.error("Ошибка при загрузке или отрисовке методов:", err);
-        showError("methods-container", "Не удалось загрузить методы<br>" + err.message);
-    }
+        container.appendChild(card);
+    });
 });
