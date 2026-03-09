@@ -89,6 +89,32 @@ footer {
     border-top: 1px solid var(--color-border);
 }
 
+footer #mode-display {
+    cursor: pointer;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    background: var(--color-neutral);
+    transition: background 0.2s;
+}
+
+footer #mode-display:hover {
+    background: var(--color-primary);
+    color: white;
+}
+
+.mode-hint {
+    font-size: 0.8rem;
+    color: var(--color-text-light);
+}
+
+/* Навигация в шапке */
+.header-nav {
+    display: flex;
+    justify-content: center;
+    gap: 0.8rem;
+    margin-top: 1rem;
+}
+
 /* Карточки методов */
 .methods-grid {
     display: grid;
@@ -137,8 +163,9 @@ footer {
 /* Навигация по страницам */
 .page-nav {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
+    gap: 0.8rem;
     max-width: 1400px;
     margin: 0 auto 1.5rem auto;
     padding-bottom: 1rem;

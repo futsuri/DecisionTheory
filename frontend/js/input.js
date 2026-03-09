@@ -79,15 +79,18 @@ function renderInputForm(algId, container) {
        inner.innerHTML = `
             <h3>Метод анализа иерархий (AHP)</h3>
 
-            <div class="setup-block">
-                <label>Количество критериев (2–9):</label>
-                <input type="number" id="crit-count" min="2" max="20" value="4" style="width:80px; margin:0 10px;">
+            <div class="setup-block setup-centered">
+                <div class="setup-row">
+                    <label>Количество критериев (2–9):</label>
+                    <input type="number" id="crit-count" min="2" max="20" value="4" style="width:80px; margin:0 10px;">
 
-                <label>Количество альтернатив (2–9):</label>
-                <input type="number" id="alt-count"  min="2" max="20" value="3" style="width:80px; margin:0 10px;">
-
-                <button id="generate-struct" class="primary-btn">Создать структуру и матрицы</button>
-                <button id="random-ahp" class="secondary-btn">Случайно заполнить</button>
+                    <label>Количество альтернатив (2–9):</label>
+                    <input type="number" id="alt-count"  min="2" max="20" value="3" style="width:80px; margin:0 10px;">
+                </div>
+                <div class="setup-buttons">
+                    <button id="generate-struct" class="primary-btn">Создать структуру и матрицы</button>
+                    <button id="random-ahp" class="secondary-btn">Случайно заполнить</button>
+                </div>
             </div>
 
             <div id="names-section" style="margin:2rem 0;"></div>
@@ -134,20 +137,22 @@ function renderInputForm(algId, container) {
         inner.innerHTML = `
             <h3>Метод главного критерия</h3>
 
-            <div class="setup-block" style="margin:1.5rem 0;">
-                <label>Количество переменных (1–5):</label>
-                <input type="number" id="dim-count" min="1" max="10" value="3">
+            <div class="setup-block setup-centered" style="margin:1.5rem 0;">
+                <div class="setup-row">
+                    <label>Количество переменных (1–5):</label>
+                    <input type="number" id="dim-count" min="1" max="10" value="3">
 
-                <label style="margin-left:2rem;">Количество критериев (2–4):</label>
-                <input type="number" id="crit-count" min="2" max="8" value="3">
-
-                <button id="generate-mc-form" class="primary-btn" style="margin-left:2rem;">
-                    Создать таблицу
-                </button>
-
-                <button id="random-mc" class="secondary-btn" style="margin-left:1rem;">
-                    Случайно заполнить
-                </button>
+                    <label style="margin-left:2rem;">Количество критериев (2–4):</label>
+                    <input type="number" id="crit-count" min="2" max="8" value="3">
+                </div>
+                <div class="setup-buttons">
+                    <button id="generate-mc-form" class="primary-btn">
+                        Создать таблицу
+                    </button>
+                    <button id="random-mc" class="secondary-btn">
+                        Случайно заполнить
+                    </button>
+                </div>
             </div>
 
             <div id="mc-form-container" style="margin-top:2rem;"></div>

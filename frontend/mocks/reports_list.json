@@ -1,0 +1,28 @@
+{
+  "items": [
+    {
+      "id": "demo-001",
+      "run_id": "demo-run-001",
+      "algorithm_id": "ahp",
+      "report_name": "14_30_08_03_26",
+      "created_at": "2026-03-08T14:30:00Z"
+    },
+    {
+      "id": "demo-002",
+      "run_id": "demo-run-002",
+      "algorithm_id": "multi_criteria",
+      "report_name": "10_15_07_03_26",
+      "created_at": "2026-03-07T10:15:00Z"
+    },
+    {
+      "id": "demo-003",
+      "run_id": "demo-run-003",
+      "algorithm_id": "ahp",
+      "report_name": "09_00_06_03_26",
+      "created_at": "2026-03-06T09:00:00Z"
+    }
+  ],
+  "total": 3,
+  "page": 1,
+  "limit": 50
+}

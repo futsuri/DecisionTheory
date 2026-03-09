@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ТПР — История отчётов</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/history.css">
+  <script src="js/common.js"></script>
+  <script src="js/history.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>Теория Принятия Решений</h1>
+    <p class="subtitle">История отчётов</p>
+  </header>
+
+  <main>
+    <div class="page-nav">
+      <button onclick="goHome()" class="nav-btn">Главная</button>
+    </div>
+
+    <div id="history-container" class="history-wrapper">
+      <!-- заполнит JS -->
+    </div>
+
+    <div id="pagination" class="pagination"></div>
+
+    <div id="clear-section" class="clear-section" style="display:none;">
+      <button id="clear-history-btn" class="danger-btn">Очистить историю</button>
+    </div>
+  </main>
+
+  <footer>
+    <p>Режим: <strong id="mode-display">real</strong> <span class="mode-hint">(нажмите для переключения)</span></p>
+  </footer>
+</body>
+</html>

@@ -4,6 +4,7 @@ run_service.py — Логика запуска:
   • диспатч на нужный алгоритм
   • сохранение run и report в MongoDB
 """
+import numpy as np
 from bson.objectid import ObjectId
 from flask import current_app
 
@@ -42,7 +43,7 @@ ALGORITHMS = [
             "constraints": "dict[str, {min, max}]",
             "main_criterion": "str|None",
         },
-        "available": False,
+        "available": True,
     },
 ]
 
@@ -75,6 +76,7 @@ def create_run(algorithm_id, input_data):
 
     try:
         result = _dispatch(algorithm_id, normalized_input)
+        result = _sanitize_result(result)
         update_doc("runs", {"_id": run_obj_id}, {
             "status": "done",
             "result": result,
@@ -84,6 +86,7 @@ def create_run(algorithm_id, input_data):
         report = build_report(run_id, algorithm_id, normalized_input, result)
         report_doc = {
             "run_id": run_id,
+            "algorithm_id": algorithm_id,
             "report": report,
             "created_at": utc_now(),
             "updated_at": utc_now(),
@@ -112,7 +115,31 @@ def get_run(run_id):
 def _normalize_input(algorithm_id, input_data):
     if algorithm_id == "ahp":
         return _normalize_ahp_input(input_data)
+    if algorithm_id == "multi_criteria":
+        return _normalize_multi_criteria_input(input_data)
     return input_data
+
+
+def _sanitize_result(obj):
+    """Рекурсивно конвертирует numpy-типы в нативные Python-типы.
+
+    scipy возвращает numpy.bool_, numpy.float64 и т.д., которые
+    BSON-энкодер pymongo не умеет сериализовать. Эта функция
+    обходит весь результат и приводит всё к int/float/bool/str/list/dict.
+    """
+    if isinstance(obj, dict):
+        return {k: _sanitize_result(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_result(v) for v in obj]
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    if isinstance(obj, (np.integer,)):
+        return int(obj)
+    if isinstance(obj, (np.floating,)):
+        return float(obj)
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    return obj
 
 
 def _normalize_ahp_input(input_data):
@@ -147,6 +174,61 @@ def _normalize_ahp_input(input_data):
         "alternatives": alternatives,
         "matrix": normalized_matrix,
         "alt_matrices": normalized_alt_matrices,
+    }
+
+
+def _normalize_multi_criteria_input(input_data):
+    """Приведение входных данных multi_criteria к каноническому виду."""
+    criteria = input_data.get("criteria", [])
+    constraints = input_data.get("constraints", {})
+    main_criterion = input_data.get("main_criterion")
+    variable_bounds = input_data.get("variable_bounds", [])
+
+    # Привести variable_bounds к списку кортежей
+    normalized_bounds = []
+    for b in variable_bounds:
+        if isinstance(b, (list, tuple)) and len(b) == 2:
+            normalized_bounds.append([float(b[0]), float(b[1])])
+        else:
+            normalized_bounds.append([0.0, 100.0])
+
+    # Привести коэффициенты в params.coeffs к float
+    normalized_criteria = []
+    for c in criteria:
+        nc = dict(c)
+        params = nc.get("params", {})
+        if "coeffs" in params:
+            params["coeffs"] = [float(v) for v in params["coeffs"]]
+        nc["params"] = params
+        # Гарантировать наличие name
+        if "name" not in nc or not nc["name"]:
+            nc["name"] = f"criterion_{len(normalized_criteria) + 1}"
+        # Гарантировать direction
+        if nc.get("direction") not in ("min", "max"):
+            nc["direction"] = "max"
+        # Гарантировать func_type
+        allowed_funcs = {"linear", "quadratic", "exponential", "logarithmic"}
+        if nc.get("func_type") not in allowed_funcs:
+            nc["func_type"] = "linear"
+        normalized_criteria.append(nc)
+
+    # Привести constraints к нормальному виду
+    normalized_constraints = {}
+    for name, value in constraints.items():
+        if isinstance(value, dict):
+            entry = {}
+            if "min" in value and value["min"] is not None:
+                entry["min"] = float(value["min"])
+            if "max" in value and value["max"] is not None:
+                entry["max"] = float(value["max"])
+            if entry:
+                normalized_constraints[name] = entry
+
+    return {
+        "criteria": normalized_criteria,
+        "constraints": normalized_constraints,
+        "main_criterion": main_criterion,
+        "variable_bounds": normalized_bounds,
     }
 
 
@@ -187,6 +269,9 @@ def _validate_for_algorithm(algorithm_id, payload):
     if algorithm_id == "ahp":
         _validate_ahp_alt_matrices(payload)
         _validate_ahp_reciprocity(payload)
+
+    if algorithm_id == "multi_criteria":
+        _validate_multi_criteria_deep(payload)
 
 
 def _validate_ahp_alt_matrices(payload):
@@ -276,12 +361,85 @@ def _check_matrix_reciprocity(matrix, table_label, row_labels, col_labels, tol=1
                 )
 
 
+def _validate_multi_criteria_deep(payload):
+    """Глубокая валидация для многокритериальной оптимизации."""
+    criteria = payload.get("criteria", [])
+    constraints = payload.get("constraints", {})
+    main_criterion = payload.get("main_criterion")
+    variable_bounds = payload.get("variable_bounds", [])
+
+    # --- variable_bounds ---
+    if not variable_bounds:
+        raise ValueError("MultiCriteria: 'variable_bounds' обязателен (список пар [min, max])")
+
+    if len(variable_bounds) > 5:
+        raise ValueError("MultiCriteria: размерность (variable_bounds) не должна превышать 5")
+
+    for i, b in enumerate(variable_bounds):
+        if not isinstance(b, (list, tuple)) or len(b) != 2:
+            raise ValueError(f"MultiCriteria: variable_bounds[{i}] должен быть парой [min, max]")
+        lb, ub = b
+        if lb >= ub:
+            raise ValueError(
+                f"MultiCriteria: variable_bounds[{i}]: min ({lb}) должен быть меньше max ({ub})"
+            )
+
+    dim = len(variable_bounds)
+
+    # --- criteria ---
+    if not criteria or len(criteria) < 1:
+        raise ValueError("MultiCriteria: необходим хотя бы один критерий")
+
+    if len(criteria) > 3:
+        raise ValueError("MultiCriteria: количество критериев не должно превышать 3")
+
+    crit_names = set()
+    for i, c in enumerate(criteria):
+        name = c.get("name", "")
+        if not name:
+            raise ValueError(f"MultiCriteria: criteria[{i}] — отсутствует 'name'")
+        if name in crit_names:
+            raise ValueError(f"MultiCriteria: дублирующееся имя критерия '{name}'")
+        crit_names.add(name)
+
+        # Проверка coeffs
+        params = c.get("params", {})
+        coeffs = params.get("coeffs", [])
+        if not isinstance(coeffs, list) or len(coeffs) == 0:
+            raise ValueError(
+                f"MultiCriteria: criteria[{i}] ('{name}') — 'params.coeffs' должен быть непустым списком"
+            )
+        for j, v in enumerate(coeffs):
+            try:
+                float(v)
+            except (TypeError, ValueError):
+                raise ValueError(
+                    f"MultiCriteria: criteria[{i}].params.coeffs[{j}] — некорректное число"
+                )
+
+    # --- main_criterion ---
+    if main_criterion is not None:
+        if main_criterion not in crit_names:
+            raise ValueError(
+                f"MultiCriteria: main_criterion '{main_criterion}' не найден среди критериев "
+                f"({', '.join(sorted(crit_names))})"
+            )
+
+    # --- constraints ---
+    for name, cons in constraints.items():
+        if name not in crit_names:
+            raise ValueError(
+                f"MultiCriteria: ограничение для неизвестного критерия '{name}'"
+            )
+        if not isinstance(cons, dict):
+            raise ValueError(
+                f"MultiCriteria: ограничение для '{name}' должно быть объектом с min/max"
+            )
+
+
 def _dispatch(algorithm_id, payload):
     if algorithm_id == "ahp":
         return run_ahp(payload)
     if algorithm_id == "multi_criteria":
-        try:
-            return run_multi_criteria(payload)
-        except NotImplementedError as exc:
-            raise ValueError("Multi-criteria algorithm is not implemented yet") from exc
+        return run_multi_criteria(payload)
     raise ValueError(f"No dispatcher for algorithm '{algorithm_id}'")

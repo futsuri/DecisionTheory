@@ -6,6 +6,7 @@ import csv
 import io
 import os
 import textwrap
+from datetime import datetime, timezone
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -39,7 +40,9 @@ def generate_report(run_id):
     report = build_report(run_id, run_doc.get("algorithm_id"), run_doc.get("input", {}), run_doc.get("result", {}))
     db.reports.insert_one({
         "run_id": run_id,
+        "algorithm_id": run_doc.get("algorithm_id"),
         "report": report,
+        "created_at": datetime.now(timezone.utc),
     })
     return report
 
@@ -51,11 +54,7 @@ def build_report(run_id, algorithm_id, payload, result):
         _attach_report_files(report, run_id, algorithm_id, payload, result)
         return report
     if algorithm_id == "multi_criteria":
-        report = {
-            "run_id": run_id,
-            "algorithm_id": algorithm_id,
-            "markdown": "# Отчёт\n\nМногокритериальная оптимизация в разработке.",
-        }
+        report = _report_multi_criteria(run_id, payload, result)
         _attach_report_files(report, run_id, algorithm_id, payload, result)
         return report
     return {
@@ -80,7 +79,8 @@ def _report_ahp(run_id, payload, result):
         "# Отчёт по расчёту",
         "",
         "**Метод:** Метод анализа иерархий (AHP)",
-        f"**Run ID:** {run_id}",
+        "",
+        f'<span style="color:#9ca3af; font-size:0.9em;">Run ID: {run_id}</span>',
         "",
         "## Веса критериев",
     ]
@@ -116,18 +116,132 @@ def _report_ahp(run_id, payload, result):
     }
 
 
+def _report_multi_criteria(run_id, payload, result):
+    """Формирование markdown-отчёта для метода главного критерия."""
+    criteria = payload.get("criteria", [])
+    constraints = payload.get("constraints", {})
+    main_criterion = payload.get("main_criterion", "—")
+    variable_bounds = payload.get("variable_bounds", [])
+
+    optimum = result.get("optimum", {})
+    ranking = result.get("ranking", [])
+    is_feasible = result.get("is_feasible", False)
+    method_used = result.get("method_used", "main_criterion")
+
+    markdown = [
+        "# Отчёт по расчёту",
+        "",
+        "**Метод:** Многокритериальная оптимизация (метод главного критерия)",
+        "",
+        f'<span style="color:#9ca3af; font-size:0.9em;">Run ID: {run_id}</span>',
+        "",
+        f"**Главный критерий:** {main_criterion}",
+        "",
+    ]
+
+    # --- Описание критериев ---
+    markdown.append("## Критерии")
+    for c in criteria:
+        name = c.get("name", "?")
+        direction = "максимизация" if c.get("direction") == "max" else "минимизация"
+        func_type = c.get("func_type", "linear")
+        coeffs = c.get("params", {}).get("coeffs", [])
+        coeffs_str = ", ".join(f"{v}" for v in coeffs)
+        markdown.append(f"- **{name}** — {direction}, тип: {func_type}, коэфф.: [{coeffs_str}]")
+
+    # --- Ограничения ---
+    if constraints:
+        markdown.append("")
+        markdown.append("## Ограничения")
+        for name, cons in constraints.items():
+            parts = []
+            if "min" in cons:
+                parts.append(f"≥ {cons['min']}")
+            if "max" in cons:
+                parts.append(f"≤ {cons['max']}")
+            markdown.append(f"- {name}: {', '.join(parts)}")
+
+    # --- Границы переменных ---
+    if variable_bounds:
+        markdown.append("")
+        markdown.append("## Границы переменных")
+        for i, b in enumerate(variable_bounds):
+            markdown.append(f"- x{i + 1}: [{b[0]}, {b[1]}]")
+
+    # --- Результаты ---
+    markdown.append("")
+    markdown.append("## Результаты")
+
+    if is_feasible and ranking:
+        solution = ranking[0].get("solution", [])
+        obj_value = ranking[0].get("objective_value", 0)
+        solution_str = ", ".join(f"{v:.4f}" for v in solution)
+        markdown.append(f"**Решение найдено:** x = ({solution_str})")
+        markdown.append(f"**Значение целевой функции ({main_criterion}):** {obj_value:.4f}")
+        markdown.append("")
+        markdown.append("### Значения критериев в оптимальной точке")
+        for name, val in optimum.items():
+            markdown.append(f"- {name} = {val:.4f}")
+    else:
+        markdown.append("**Допустимое решение не найдено.** Проверьте ограничения и границы переменных.")
+
+    # --- Графики ---
+    chart_md = _build_multi_criteria_charts(optimum, is_feasible)
+    if chart_md:
+        markdown.extend(["", chart_md])
+
+    return {
+        "run_id": run_id,
+        "algorithm_id": "multi_criteria",
+        "markdown": "\n".join(markdown),
+    }
+
+
+def _build_multi_criteria_charts(optimum, is_feasible):
+    """Строит столбчатую диаграмму значений критериев в оптимальной точке."""
+    if not optimum or not is_feasible:
+        return ""
+
+    names = list(optimum.keys())
+    values = list(optimum.values())
+
+    fig, ax = plt.subplots(figsize=(6, 3))
+    colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"]
+    bar_colors = [colors[i % len(colors)] for i in range(len(names))]
+    ax.bar(names, values, color=bar_colors)
+    ax.set_title("Значения критериев в оптимальной точке")
+    ax.set_ylabel("Значение")
+    fig.tight_layout()
+    b64 = _fig_to_base64(fig)
+    plt.close(fig)
+
+    return f"![Значения критериев](data:image/png;base64,{b64})"
+
+
 def _attach_report_files(report, run_id, algorithm_id, payload, result):
     output_dir, base_dir = _get_output_dir()
     os.makedirs(output_dir, exist_ok=True)
 
-    csv_path = os.path.join(output_dir, f"{run_id}.csv")
-    pdf_path = os.path.join(output_dir, f"{run_id}.pdf")
+    # Формат имени: hh_mm_dd_mm_yy (локальное время)
+    now = datetime.now()
+    file_stem = now.strftime("%H_%M_%d_%m_%y")
+
+    # Если файл с таким именем уже существует — добавляем суффикс
+    csv_path = os.path.join(output_dir, f"{file_stem}.csv")
+    pdf_path = os.path.join(output_dir, f"{file_stem}.pdf")
+    counter = 1
+    while os.path.exists(csv_path) or os.path.exists(pdf_path):
+        candidate = f"{file_stem}_{counter}"
+        csv_path = os.path.join(output_dir, f"{candidate}.csv")
+        pdf_path = os.path.join(output_dir, f"{candidate}.pdf")
+        counter += 1
 
     _write_report_csv(csv_path, algorithm_id, payload, result)
     _write_report_pdf(pdf_path, algorithm_id, payload, result)
 
     report["csv_path"] = os.path.relpath(csv_path, base_dir)
     report["pdf_path"] = os.path.relpath(pdf_path, base_dir)
+    report["report_filename"] = os.path.splitext(os.path.basename(csv_path))[0]
 
 
 def _get_output_dir():
@@ -180,6 +294,28 @@ def _write_report_csv(path, algorithm_id, payload, result):
                     "",
                 ])
 
+        elif algorithm_id == "multi_criteria":
+            optimum = result.get("optimum", {})
+            ranking = result.get("ranking", [])
+            is_feasible = result.get("is_feasible", False)
+
+            writer.writerow(["", "", "", ""])
+            writer.writerow(["feasibility", "is_feasible", is_feasible, ""])
+
+            if ranking:
+                solution = ranking[0].get("solution", [])
+                obj_value = ranking[0].get("objective_value", 0)
+                writer.writerow(["", "", "", ""])
+                writer.writerow(["solution", "", "", ""])
+                for i, val in enumerate(solution):
+                    writer.writerow(["solution", f"x{i + 1}", val, ""])
+                writer.writerow(["objective", "value", obj_value, ""])
+
+            writer.writerow(["", "", "", ""])
+            writer.writerow(["criteria_values", "", "", ""])
+            for name, val in optimum.items():
+                writer.writerow(["criteria_value", name, val, ""])
+
 
 def _write_report_pdf(path, algorithm_id, payload, result):
     lines = [
@@ -211,6 +347,27 @@ def _write_report_pdf(path, algorithm_id, payload, result):
             lines.append(
                 f"Согласованность: CR={consistency.get('cr', 0.0):.4f}"
             )
+    elif algorithm_id == "multi_criteria":
+        optimum = result.get("optimum", {})
+        ranking_mc = result.get("ranking", [])
+        is_feasible = result.get("is_feasible", False)
+        main_crit = payload.get("main_criterion", "—")
+
+        lines.append(f"Главный критерий: {main_crit}")
+        lines.append(f"Допустимое решение: {'Да' if is_feasible else 'Нет'}")
+
+        if is_feasible and ranking_mc:
+            solution = ranking_mc[0].get("solution", [])
+            obj_value = ranking_mc[0].get("objective_value", 0)
+            sol_str = ", ".join(f"{v:.4f}" for v in solution)
+            lines.append(f"Решение: x = ({sol_str})")
+            lines.append(f"Значение целевой функции: {obj_value:.4f}")
+            lines.append("")
+            lines.append("Значения критериев:")
+            for name, val in optimum.items():
+                lines.append(f"- {name}: {val:.4f}")
+        else:
+            lines.append("Допустимое решение не найдено.")
     else:
         lines.append("Данные для отчёта будут добавлены позже.")
 
@@ -260,6 +417,22 @@ def _write_report_pdf(path, algorithm_id, payload, result):
                 fig_rank.tight_layout()
                 pdf.savefig(fig_rank, bbox_inches="tight")
                 plt.close(fig_rank)
+
+        elif algorithm_id == "multi_criteria":
+            optimum = result.get("optimum", {})
+            is_feasible = result.get("is_feasible", False)
+            if optimum and is_feasible:
+                names_mc = list(optimum.keys())
+                values_mc = list(optimum.values())
+                colors_mc = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"]
+                bar_colors_mc = [colors_mc[i % len(colors_mc)] for i in range(len(names_mc))]
+                fig_mc, ax_mc = plt.subplots(figsize=(8.27, 4.5))
+                ax_mc.bar(names_mc, values_mc, color=bar_colors_mc)
+                ax_mc.set_title("Значения критериев в оптимальной точке")
+                ax_mc.set_ylabel("Значение")
+                fig_mc.tight_layout()
+                pdf.savefig(fig_mc, bbox_inches="tight")
+                plt.close(fig_mc)
 
 
 

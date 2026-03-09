@@ -1,0 +1,160 @@
+/* history.css — стили страницы истории отчётов */
+
+.history-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--color-card);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    font-size: 1rem;
+}
+
+.history-table thead th {
+    background: var(--color-neutral);
+    font-weight: 600;
+    padding: 1rem 1.2rem;
+    text-align: left;
+    color: var(--color-text);
+    border-bottom: 2px solid var(--color-border);
+}
+
+.history-table tbody td {
+    padding: 0.9rem 1.2rem;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+}
+
+.history-table tbody tr:hover {
+    background: var(--color-neutral);
+}
+
+.history-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.actions-cell {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    display: inline-block;
+    padding: 0.4rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.view-btn {
+    background: var(--color-primary);
+    color: white;
+}
+
+.view-btn:hover {
+    background: var(--color-primary-dark);
+    transform: translateY(-1px);
+}
+
+.csv-btn {
+    background: var(--color-secondary);
+    color: white;
+}
+
+.csv-btn:hover {
+    background: #059669;
+}
+
+.pdf-btn {
+    background: #64748b;
+    color: white;
+}
+
+.pdf-btn:hover {
+    background: #4b5563;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: var(--color-card);
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+}
+
+.empty-state p:first-child {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+/* Пагинация */
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 2rem 0;
+}
+
+.page-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-card);
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+}
+
+.page-btn:hover {
+    background: var(--color-neutral);
+}
+
+.page-btn.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+.mode-hint {
+    font-size: 0.8rem;
+    color: var(--color-text-light);
+}
+
+/* Кнопка очистки истории */
+.clear-section {
+    display: flex;
+    justify-content: center;
+    margin: 2rem 0 1rem;
+}
+
+.danger-btn {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 0.8rem 2rem;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.danger-btn:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+}
+
+.danger-btn:active {
+    transform: translateY(0);
+}

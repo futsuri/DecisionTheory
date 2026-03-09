@@ -36,6 +36,8 @@ def init_db():
     db.runs.create_index("algorithm_id")
     db.runs.create_index("status")
     db.reports.create_index("run_id", unique=True)
+    db.reports.create_index("created_at")
+    db.reports.create_index("algorithm_id")
     return db
 
 

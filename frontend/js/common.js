@@ -1,18 +1,33 @@
 // js/common.js — общая логика
-const APP_MODE = "real";           // "mock" для локальных моков
-const API_BASE = APP_MODE === "mock" ? "" : "";
 
-window.APP_MODE = APP_MODE; // для отладки
+// ==================== РЕЖИМ real / demo ====================
+const APP_MODE = localStorage.getItem("app_mode") || "real";
+const API_BASE = "";
 
-// Показать текущий режим в футере, если элемент присутствует
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => {
-    const modeEl = document.getElementById("mode-display");
-    if (modeEl) modeEl.textContent = APP_MODE;
-  });
-} else {
+window.APP_MODE = APP_MODE;
+
+function toggleMode() {
+  const current = localStorage.getItem("app_mode") || "real";
+  const next = current === "real" ? "demo" : "real";
+  localStorage.setItem("app_mode", next);
+  window.location.reload();
+}
+
+// Показать текущий режим + сделать кнопку-тогглер
+function _initModeDisplay() {
   const modeEl = document.getElementById("mode-display");
-  if (modeEl) modeEl.textContent = APP_MODE;
+  if (modeEl) {
+    modeEl.textContent = APP_MODE;
+    modeEl.style.cursor = "pointer";
+    modeEl.title = "Нажмите для переключения режима";
+    modeEl.addEventListener("click", toggleMode);
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", _initModeDisplay);
+} else {
+  _initModeDisplay();
 }
 
 // ==================== ХРАНИЛИЩЕ ====================
@@ -26,7 +41,7 @@ function load(key, defaultVal = null) {
 
 // ==================== API ====================
 async function fetchAlgorithms() {
-  if (APP_MODE === "mock") {
+  if (APP_MODE === "demo") {
     try {
       // Вариант 1 — самый частый рабочий локально
       let url = "mocks/algorithms.json";           // без точки и слеша в начале
@@ -58,8 +73,8 @@ async function fetchAlgorithms() {
 }
 
 async function createRun(payload) {
-  if (APP_MODE === "mock") {
-    return { run_id: "demo-run-001" }; // имитация
+  if (APP_MODE === "demo") {
+    return { run_id: "demo-run-001" };
   }
   const res = await fetch(`${API_BASE}/api/runs`, {
     method: "POST",
@@ -75,12 +90,31 @@ async function createRun(payload) {
 }
 
 async function fetchReport(runId) {
-  if (APP_MODE === "mock") {
-    const res = await fetch("./mocks/report.json");
+  if (APP_MODE === "demo") {
+    const res = await fetch("mocks/report.json");
     return await res.json();
   }
   const res = await fetch(`${API_BASE}/api/reports/${runId}`);
   if (!res.ok) throw new Error("Ошибка загрузки отчёта");
+  return await res.json();
+}
+
+async function fetchReportsList(page = 1, limit = 50) {
+  if (APP_MODE === "demo") {
+    const res = await fetch("mocks/reports_list.json");
+    return await res.json();
+  }
+  const res = await fetch(`${API_BASE}/api/reports?page=${page}&limit=${limit}`);
+  if (!res.ok) throw new Error("Ошибка загрузки истории отчётов");
+  return await res.json();
+}
+
+async function clearReports() {
+  if (APP_MODE === "demo") {
+    return { deleted: 0 };
+  }
+  const res = await fetch(`${API_BASE}/api/reports`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Ошибка очистки истории");
   return await res.json();
 }
 
@@ -92,7 +126,24 @@ function showLoading(elementId, text = "Загрузка...") {
 
 function showError(elementId, msg) {
   const el = document.getElementById(elementId);
-  if (el) el.innerHTML = `<div class="error">❌ ${msg}</div>`;
+  if (el) el.innerHTML = `<div class="error">${msg}</div>`;
+}
+
+/**
+ * Форматирует ISO-строку даты в формат hh:mm dd.mm.yy
+ * @param {string} isoString — дата в ISO 8601
+ * @returns {string}
+ */
+function formatDate(isoString) {
+  if (!isoString) return "—";
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return "—";
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${hh}:${mm} ${dd}.${mo}.${yy}`;
 }
 
 // Возвращает название метода по id (для отображения на input.html)
@@ -109,6 +160,11 @@ function getMethodNameById(id) {
 // переход на главную
 function goHome() {
     window.location.href = "/";
+}
+
+// переход к истории
+function goHistory() {
+    window.location.href = "/history";
 }
 
 // переход назад

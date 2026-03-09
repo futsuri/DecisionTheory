@@ -20,6 +20,6 @@
       "constraints": "dict[str, {min, max}]",
       "main_criterion": "str|None"
     },
-    "available": false
+    "available": true
   }
 ]

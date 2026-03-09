@@ -1,0 +1,16 @@
+section,name,value,value_percent
+meta,algorithm,ahp,
+,,,
+criteria_weights,,,
+criteria_weight,Критерий 1,0.5051372822721434,50.51372822721434
+criteria_weight,Критерий 2,0.2917542734975754,29.175427349757538
+criteria_weight,Критерий 3,0.156612155091506,15.6612155091506
+criteria_weight,Критерий 4,0.046496289138775244,4.649628913877525
+,,,
+ranking,,,
+ranking,Альтернатива 1,0.5849947955264987,58.499479552649866
+ranking,Альтернатива 2,0.2558405324435104,25.58405324435104
+ranking,Альтернатива 3,0.15916467202999096,15.916467202999096
+,,,
+consistency,cr,0.17940657307353822,
+consistency,is_consistent,False,
