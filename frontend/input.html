@@ -6,19 +6,29 @@
   <title>ТПР — Ввод параметров</title>
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/input.css">          <!-- если создавал -->
+
+    <link rel="stylesheet" href="css/style.css">
+
   <script src="js/common.js"></script>
   <script src="js/input.js" defer></script>             <!-- ЭТО САМОЕ ВАЖНОЕ -->
 </head>
 <body>
-  <header>
+  <header id="input-header">
     <h1>ТПР</h1>
     <p class="subtitle">Ввод параметров</p>
   </header>
 
   <main>
-    <div id="algorithm-title" class="algo-title"></div>
-    <div id="form-container" class="form-wrapper"></div>
-    <div id="status" class="status"></div>
+
+  <div class="page-nav">
+    <button onclick="goBack()" class="nav-btn">Назад</button>
+    <button onclick="goHome()" class="nav-btn">Главная</button>
+  </div>
+
+  <div id="algorithm-title" class="algo-title"></div>
+  <div id="form-container" class="form-wrapper"></div>
+  <div id="status" class="status"></div>
+
   </main>
 
   <footer>

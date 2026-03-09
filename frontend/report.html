@@ -6,6 +6,9 @@
   <title>ТПР — Отчёт</title>
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/report.css">
+
+    <link rel="stylesheet" href="css/style.css">
+
   <script src="js/common.js"></script>
   <script src="js/report.js" defer></script>
   <!-- CDN для красивого markdown и графиков -->
@@ -13,11 +16,15 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <header>
+  <header id="report-title">
     <h1>Отчёт</h1>
   </header>
 
   <main>
+      <div class="page-nav">
+        <button onclick="goBack()" class="nav-btn">Назад</button>
+        <button onclick="goHome()" class="nav-btn">Главная</button>
+      </div>
     <div id="report-content" class="report-box"></div>
     <div id="report-actions" class="report-actions"></div>
   </main>

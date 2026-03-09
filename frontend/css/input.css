@@ -1,97 +1,255 @@
 .form-inner {
-    background: white;
-    border-radius: 12px;
-    padding: 2rem;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    background: var(--color-card);
+    border-radius: 16px;
+    padding: 2.2rem;
+    box-shadow: var(--shadow-md);
+    max-width: 100%;
 }
 
 .data-table {
     width: 100%;
+    max-width: 100%;
     border-collapse: collapse;
-    margin: 1rem 0 2rem;
+    margin: 1.5rem 0 2.5rem;
 }
 
 .data-table th,
 .data-table td {
-    border: 1px solid #e2e8f0;
-    padding: 0.8rem 1rem;
+    border: 1px solid var(--color-border);
+    padding: 0.9rem 1.2rem;
     text-align: center;
+    vertical-align: middle;
+}
+
+.data-table th {
+    background: var(--color-neutral);
+    font-weight: 600;
+    font-size: 1.05rem;
 }
 
 .data-table input {
     width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 1rem;
+    padding: 0.7rem;
+    border: 1px solid var(--color-neutral-dark);
+    border-radius: 8px;
+    font-size: 1.05rem;
 }
 
 .primary-btn {
-    background: #1d4ed8;
+    background: var(--color-primary);
     color: white;
     border: none;
-    padding: 1rem 2.2rem;
-    border-radius: 8px;
+    padding: 1rem 2.4rem;
+    border-radius: 10px;
     font-size: 1.1rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s ease;
 }
 
 .primary-btn:hover {
-    background: #1e40af;
+    background: var(--color-primary-dark);
+    transform: translateY(-2px);
+}
+
+.primary-btn:active {
+    transform: translateY(0);
 }
 
 .ahp-matrix-table {
     border-collapse: collapse;
-    margin: 1.5rem 0;
-    font-size: 0.95rem;
+    margin: 0 auto;
+    font-size: 0.92rem;               /* чуть меньше для плотности */
+    width: auto;
+    table-layout: auto;
+    min-width: 0;
 }
 
 .ahp-matrix-table th,
 .ahp-matrix-table td {
-    border: 1px solid #cbd5e1;
-    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--color-border);
+    padding: 0.45rem 0.65rem;        /* сильно уменьшили padding */
     text-align: center;
-    min-width: 80px;
+    min-width: 62px;                 /* ключевое: 62–65 px → 9×9 ≈ 620–680 px + заголовок */
+    max-width: 130px;
 }
 
 .ahp-matrix-table th {
-    background: #f1f5f9;
+    background: var(--color-neutral);
     font-weight: 600;
+    font-size: 0.98rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
 }
 
 .ahp-cell {
-    width: 100%;
-    padding: 0.4rem;
+    width: 62px;
+    min-width: 62px;
+    padding: 0.35rem 0.4rem;
     text-align: center;
-    border: 1px solid #94a3b8;
-    border-radius: 4px;
-    background: #ffffff;
+    border: 1px solid var(--color-neutral-dark);
+    border-radius: 5px;
+    background: white;
+    font-size: 0.92rem;
 }
 
 .ahp-cell.diagonal {
     background: #e2e8f0;
     font-weight: bold;
     cursor: not-allowed;
+    width: 62px;
 }
 
-.ahp-cell.mirrored {
-    background: #f8fafc;
-    color: #475569;
-    font-style: italic;
+.ahp-cell.mirrored,
+.mirror {
+    background: #ffdde0;
+    color: #4b5563;
+    font-weight: 500;
+    width: 62px;
 }
 
-.ahp-cell select {
+/* Скролл только когда действительно нужно */
+.table-wrapper {
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin: 1rem auto 2.5rem auto;
+    max-width: 100%;
+    padding-bottom: 0.5rem;
+}
+
+/* Тонкий скроллбар */
+.table-wrapper::-webkit-scrollbar {
+    height: 7px;
+}
+.table-wrapper::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+.table-wrapper::-webkit-scrollbar-thumb {
+    background: #9ca3af;
+    border-radius: 4px;
+}
+
+/* ────────────────────────────────────────────────
+   Красивые карточки для ввода названий
+───────────────────────────────────────────────── */
+
+.names-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.25rem 1.5rem;
+    margin: 1rem 0 2.5rem 0;
+}
+
+.name-card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 1.1rem 1.3rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: all 0.18s ease;
+}
+
+.name-card:hover {
+    box-shadow: 0 5px 15px rgba(37, 99, 235, 0.12);
+    transform: translateY(-2px);
+}
+
+.name-card label {
+    display: block;
+    font-weight: 600;
+    font-size: 1.05rem;
+    margin-bottom: 0.65rem;
+    color: var(--color-primary-darker);
+}
+
+.name-card input {
     width: 100%;
-    padding: 0.4rem;
-    border: none;
-    background: transparent;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 1.03rem;
+    background: #ffffff;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.ahp-matrix-table th {
-    max-width:160px;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
+.name-card input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+
+/* Адаптивность для маленьких экранов */
+@media (max-width: 720px) {
+    .names-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .name-card {
+        padding: 1rem;
+    }
+}
+
+/* Заголовки секций AHP */
+#criteria-matrix-section h4,
+#alt-matrices-section h4 {
+    font-size: 1.35rem; /* было ~1.2rem или меньше */
+    font-weight: 600;
+    color: var(--color-primary-darker);
+    margin: 2.5rem 0 1.3rem 0;
+    line-height: 1.4;
+}
+
+#alt-matrices h5 {
+    font-size: 1.25rem; /* было ~1rem */
+    font-weight: 600;
+    color: var(--color-primary-darker);
+    margin: 2.2rem 0 1rem 0;
+    line-height: 1.4;
+}
+
+/* Дополнительно — чтобы все h4, h5 были чуть крупнее */
+h4 {
+    font-size: 1.35rem;
+    font-weight: 600;
+}
+
+h5 {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.data-table th, .data-table td {
+    padding: 0.8rem;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+}
+
+.data-table input {
+    width: 100%;
+    padding: 0.5rem;
+    border: none;
+}
+
+.data-table select {
+    width: 100%;
+    padding: 0.5rem;
+}
+
+.crit-limit:disabled {
+    border: 2px solid #ef4444 !important;
+    background: #ffebee !important;
+    color: #991b1b;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;  // Firefox
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;  // Chrome, Safari, Edge
 }

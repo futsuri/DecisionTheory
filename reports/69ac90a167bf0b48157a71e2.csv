@@ -1,0 +1,16 @@
+section,name,value,value_percent
+meta,algorithm,ahp,
+,,,
+criteria_weights,,,
+criteria_weight,Критерий 1,0.25,25.0
+criteria_weight,Критерий 2,0.25,25.0
+criteria_weight,Критерий 3,0.25,25.0
+criteria_weight,Критерий 4,0.25,25.0
+,,,
+ranking,,,
+ranking,Альтернатива 1,0.3333333333333333,33.33333333333333
+ranking,Альтернатива 2,0.3333333333333333,33.33333333333333
+ranking,Альтернатива 3,0.3333333333333333,33.33333333333333
+,,,
+consistency,cr,0.0,
+consistency,is_consistent,True,
