@@ -12,7 +12,7 @@ services:
       APP_DEBUG: "0"
       MONGO_URI: mongodb://mongo:27017/decision_theory
     ports:
-      - "8080:8000"
+      - "8000:8000"
     volumes:
       - ..:/app
     depends_on:
@@ -20,18 +20,18 @@ services:
         condition: service_healthy
     command: ["gunicorn", "-b", "0.0.0.0:8000", "-w", "2", "--timeout", "120", "--reload", "run:app"]
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 15s
 
   mongo:
     image: mongo:7
     container_name: decision_mongo
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
       - mongo_data:/data/db
     healthcheck:
