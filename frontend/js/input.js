@@ -251,11 +251,11 @@ function generateAHPStructure(critCount, altCount, inner) {
     html += `</div>`;
 
     // 3. Матрица сравнения критериев
-    html += `<h4 style="margin-top:2.5rem;">1. Матрица сравнения критериев между собой</h4>`;
+    html += `<h4 class="section-title">1. Матрица сравнения критериев между собой</h4>`;
     html += `<div id="criteria-matrix"></div>`;
 
     // 4. Матрицы альтернатив по каждому критерию
-    html += `<h4 style="margin-top:2.5rem;">2. Матрицы сравнения альтернатив по каждому критерию</h4>`;
+    html += `<h4 class="section-title">2. Матрицы сравнения альтернатив по каждому критерию</h4>`;
     html += `<div id="alt-matrices"></div>`;
 
     document.getElementById("names-section").innerHTML = html;
@@ -515,7 +515,7 @@ function renderAlternativeMatrices(containerId, critCount, altCount) {
 
     for (let c = 0; c < critCount; c++) {
         html += `
-            <h5>Матрица сравнения альтернатив по критерию ${c+1}</h5>
+            <h5 class="section-title">Матрица сравнения альтернатив по критерию ${c+1}</h5>
             <div id="alt-matrix-${c}" class="matrix-container"></div>
         `;
     }
