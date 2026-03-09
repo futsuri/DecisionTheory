@@ -87,6 +87,7 @@ function renderInputForm(algId, container) {
                 <input type="number" id="alt-count"  min="2" max="20" value="3" style="width:80px; margin:0 10px;">
 
                 <button id="generate-struct" class="primary-btn">Создать структуру и матрицы</button>
+                <button id="random-ahp" class="secondary-btn">Случайно заполнить</button>
             </div>
 
             <div id="names-section" style="margin:2rem 0;"></div>
@@ -111,8 +112,25 @@ function renderInputForm(algId, container) {
             generateAHPStructure(critCount, altCount, inner);
             document.getElementById("submit-btn").style.display = "block";
         });
+        const randomBtn = document.getElementById("random-ahp");
+        if (randomBtn) {
+            randomBtn.addEventListener("click", () => {
 
-        } else if (algId === "multi_criteria") {
+                const critCount = parseInt(document.getElementById("crit-count").value);
+                const altCount  = parseInt(document.getElementById("alt-count").value);
+
+                generateAHPStructure(critCount, altCount, document.querySelector(".form-inner"));
+
+                setTimeout(() => {
+                    randomizeAHP();
+                }, 50);
+
+                document.getElementById("submit-btn").style.display = "block";
+
+            });
+        }
+
+       } else if (algId === "multi_criteria") {
         inner.innerHTML = `
             <h3>Метод главного критерия</h3>
 
@@ -125,6 +143,10 @@ function renderInputForm(algId, container) {
 
                 <button id="generate-mc-form" class="primary-btn" style="margin-left:2rem;">
                     Создать таблицу
+                </button>
+
+                <button id="random-mc" class="secondary-btn" style="margin-left:1rem;">
+                    Случайно заполнить
                 </button>
             </div>
 
@@ -147,6 +169,27 @@ function renderInputForm(algId, container) {
             renderMultiCriteriaForm(dim, crit);  // ← здесь вызывается функция
             document.getElementById("submit-btn").style.display = "block";
         });
+
+        const randomMC = document.getElementById("random-mc");
+
+        if (randomMC) {
+
+            randomMC.addEventListener("click", () => {
+
+                const dim = parseInt(document.getElementById("dim-count").value);
+                const crit = parseInt(document.getElementById("crit-count").value);
+
+                renderMultiCriteriaForm(dim, crit);
+
+                setTimeout(() => {
+                    randomizeMC();
+                }, 50);
+
+                document.getElementById("submit-btn").style.display = "block";
+
+            });
+
+        }
     }
 }
 
@@ -598,4 +641,58 @@ function renderMultiCriteriaForm(dimCount, critCount) {
     });
 
     updateLimitsState();
+}
+
+function randomizeAHP() {
+
+    const saaty = [1,2,3,4,5,6,7,8,9];
+
+    document.querySelectorAll(".upper").forEach(input => {
+
+        const val = saaty[Math.floor(Math.random() * saaty.length)];
+        input.value = val;
+
+        const mirrorPos = input.dataset.mirror.split("-");
+        const r = mirrorPos[0];
+        const c = mirrorPos[1];
+
+        const container = input.closest("table");
+
+        const mirrorCell = container.querySelector(
+            `.mirror[data-row="${r}"][data-col="${c}"]`
+        );
+
+        if (mirrorCell) {
+            mirrorCell.value = (1/val).toFixed(4);
+        }
+
+    });
+
+}
+
+function randomizeMC() {
+
+    document.querySelectorAll(".crit-coeff").forEach(inp => {
+        inp.value = (Math.random()*10 - 5).toFixed(2);
+    });
+
+    document.querySelectorAll(".var-min").forEach(inp => {
+        inp.value = Math.floor(Math.random()*10);
+    });
+
+    document.querySelectorAll(".var-max").forEach(inp => {
+        inp.value = Math.floor(Math.random()*100 + 10);
+    });
+
+    document.querySelectorAll(".crit-limit").forEach(inp => {
+        inp.value = Math.floor(Math.random()*50);
+    });
+
+    const checks = document.querySelectorAll(".main-crit-check");
+
+    if (checks.length > 0) {
+        const randomIndex = Math.floor(Math.random()*checks.length);
+        checks[randomIndex].checked = true;
+    }
+
 }
