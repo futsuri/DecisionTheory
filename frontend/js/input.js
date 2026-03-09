@@ -81,10 +81,10 @@ function renderInputForm(algId, container) {
 
             <div class="setup-block setup-centered">
                 <div class="setup-row">
-                    <label>Количество критериев (2–9):</label>
+                    <label>Количество критериев (2–20):</label>
                     <input type="number" id="crit-count" min="2" max="20" value="4" style="width:80px; margin:0 10px;">
 
-                    <label>Количество альтернатив (2–9):</label>
+                    <label>Количество альтернатив (2–20):</label>
                     <input type="number" id="alt-count"  min="2" max="20" value="3" style="width:80px; margin:0 10px;">
                 </div>
                 <div class="setup-buttons">
@@ -140,10 +140,10 @@ function renderInputForm(algId, container) {
             <div class="setup-block setup-centered" style="margin:1.5rem 0;">
                 <div class="setup-row">
                     <label>Количество переменных (1–5):</label>
-                    <input type="number" id="dim-count" min="1" max="10" value="3">
+                    <input type="number" id="dim-count" min="1" max="5" value="3">
 
-                    <label style="margin-left:2rem;">Количество критериев (2–4):</label>
-                    <input type="number" id="crit-count" min="2" max="8" value="3">
+                    <label style="margin-left:2rem;">Количество критериев (2–3):</label>
+                    <input type="number" id="crit-count" min="2" max="3" value="3">
                 </div>
                 <div class="setup-buttons">
                     <button id="generate-mc-form" class="primary-btn">
@@ -167,7 +167,7 @@ function renderInputForm(algId, container) {
             const crit = parseInt(document.getElementById("crit-count").value);
 
             if (dim < 1 || dim > 10 || crit < 2 || crit > 8) {
-                alert("Переменные 1–10, критерии 2–8");
+                alert("Переменные 1–5, критерии 2–3");
                 return;
             }
 
