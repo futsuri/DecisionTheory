@@ -108,7 +108,7 @@ function renderInputForm(algId, container) {
             const altCount  = parseInt(document.getElementById("alt-count").value);
 
             if (critCount < 2 || critCount > 20 || altCount < 2 || altCount > 20) {
-                alert("Количество критериев и альтернатив должно быть от 2 до 9");
+                alert("Количество критериев и альтернатив должно быть от 2 до 20");
                 return;
             }
 
