@@ -10,13 +10,13 @@ services:
     environment:
       APP_ENV: docker
       APP_DEBUG: "0"
-      MONGO_URI: mongodb://mongo:27017/decision_theory
+      POSTGRES_DSN: postgresql://decision_user:decision_pass@postgres:5432/decision_theory
     ports:
       - "8000:8000"
     volumes:
       - ..:/app
     depends_on:
-      mongo:
+      postgres:
         condition: service_healthy
     command: ["gunicorn", "-b", "0.0.0.0:8000", "-w", "2", "--timeout", "120", "--reload", "run:app"]
     healthcheck:
@@ -26,20 +26,24 @@ services:
       retries: 5
       start_period: 15s
 
-  mongo:
-    image: mongo:7
-    container_name: decision_mongo
+  postgres:
+    image: postgres:16
+    container_name: decision_postgres
     restart: unless-stopped
     ports:
-      - "27018:27017"
+      - "5432:5432"
     volumes:
-      - mongo_data:/data/db
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: decision_theory
+      POSTGRES_USER: decision_user
+      POSTGRES_PASSWORD: decision_pass
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD-SHELL", "pg_isready -U decision_user -d decision_theory"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
 
 volumes:
-  mongo_data:
+  postgres_data:

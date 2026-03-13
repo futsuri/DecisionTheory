@@ -11,10 +11,9 @@ from datetime import datetime, timezone
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-from bson.objectid import ObjectId
 from flask import current_app, has_app_context
 
-from app.db import get_db
+from app.db import get_report as fetch_report, get_run as fetch_run, insert_report
 
 
 matplotlib.use("Agg")
@@ -22,27 +21,23 @@ matplotlib.use("Agg")
 
 def generate_report(run_id):
     """Возвращает сохранённый отчёт по run_id или None."""
-    db = get_db()
-    report_doc = db.reports.find_one({"run_id": run_id})
+    report_doc = fetch_report(run_id)
     if report_doc:
         return report_doc.get("report")
 
-    try:
-        obj_id = ObjectId(run_id)
-    except Exception:
-        obj_id = None
-    run_doc = db.runs.find_one({"_id": obj_id}) if obj_id else None
+    run_doc = fetch_run(run_id)
     if run_doc is None:
         return None
     if run_doc.get("status") != "done":
         return {"error": "Run is not finished yet", "status": run_doc.get("status")}
 
     report = build_report(run_id, run_doc.get("algorithm_id"), run_doc.get("input", {}), run_doc.get("result", {}))
-    db.reports.insert_one({
+    insert_report({
         "run_id": run_id,
         "algorithm_id": run_doc.get("algorithm_id"),
         "report": report,
         "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
     })
     return report
 

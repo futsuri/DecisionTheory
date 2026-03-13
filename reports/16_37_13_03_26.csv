@@ -1,0 +1,9 @@
+section,name,value,value_percent
+meta,algorithm,multi_criteria,
+,,,
+feasibility,is_feasible,False,
+,,,
+criteria_values,,,
+criteria_value,f1,3.0899999999994137,
+criteria_value,f2,-5.610000000000193,
+criteria_value,f3,11.94000000000009,

@@ -103,128 +103,140 @@
     transform: translateY(0);
 }
 
-.ahp-matrix-table {
-    border-collapse: collapse;
-    margin: 0 auto;
-    font-size: 0.92rem;               /* чуть меньше для плотности */
-    width: auto;
-    table-layout: auto;
-    min-width: 0;
+/* FAQ toggle icon and modal */
+.method-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
 }
 
-.ahp-matrix-table th,
-.ahp-matrix-table td {
-    border: 1px solid var(--color-border);
-    padding: 0.45rem 0.65rem;        /* сильно уменьшили padding */
-    text-align: center;
-    min-width: 62px;                 /* ключевое: 62–65 px → 9×9 ≈ 620–680 px + заголовок */
-    max-width: 130px;
+.method-header h3 {
+    margin: 0;
 }
 
-.ahp-matrix-table th {
-    background: var(--color-neutral);
-    font-weight: 600;
-    font-size: 0.98rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 140px;
+.faq-toggle {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: linear-gradient(145deg, #ffffff, #e2e8f0);
+    color: #1e3a8a;
+    font-weight: 700;
+    font-size: 1.05rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 14px rgba(30, 64, 175, 0.15);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.ahp-cell {
-    width: 62px;
-    min-width: 62px;
-    padding: 0.35rem 0.4rem;
-    text-align: center;
-    border: 1px solid var(--color-neutral-dark);
-    border-radius: 5px;
-    background: white;
-    font-size: 0.92rem;
-}
-
-.ahp-cell.diagonal {
-    background: #e2e8f0;
-    font-weight: bold;
-    cursor: not-allowed;
-    width: 62px;
-}
-
-.ahp-cell.mirrored,
-.mirror {
-    background: #ffdde0;
-    color: #4b5563;
-    font-weight: 500;
-    width: 62px;
-}
-
-/* Скролл только когда действительно нужно */
-.table-wrapper {
-    overflow-x: auto;
-    overflow-y: hidden;
-    margin: 1rem auto 2.5rem auto;
-    max-width: 100%;
-    padding-bottom: 0.5rem;
-}
-
-/* Тонкий скроллбар */
-.table-wrapper::-webkit-scrollbar {
-    height: 7px;
-}
-.table-wrapper::-webkit-scrollbar-track {
-    background: #f1f5f9;
-}
-.table-wrapper::-webkit-scrollbar-thumb {
-    background: #9ca3af;
-    border-radius: 4px;
-}
-
-/* ────────────────────────────────────────────────
-   Красивые карточки для ввода названий
-───────────────────────────────────────────────── */
-
-.names-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 1.25rem 1.5rem;
-    margin: 1rem 0 2.5rem 0;
-}
-
-.name-card {
-    background: var(--color-card);
-    border: 1px solid var(--color-border);
-    border-radius: 10px;
-    padding: 1.1rem 1.3rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    transition: all 0.18s ease;
-}
-
-.name-card:hover {
-    box-shadow: 0 5px 15px rgba(37, 99, 235, 0.12);
+.faq-toggle:hover {
+    border-color: #93c5fd;
+    box-shadow: 0 8px 18px rgba(30, 64, 175, 0.22);
     transform: translateY(-2px);
 }
 
-.name-card label {
-    display: block;
-    font-weight: 600;
-    font-size: 1.05rem;
-    margin-bottom: 0.65rem;
+.faq-toggle:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 10px rgba(30, 64, 175, 0.18);
+}
+
+.faq-modal[hidden] {
+    display: none;
+}
+
+.faq-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.faq-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+}
+
+.faq-modal-dialog {
+    position: relative;
+    z-index: 1;
+    width: min(680px, 92vw);
+    max-height: 80vh;
+    overflow: auto;
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 1.4rem 1.6rem 1.6rem;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+}
+
+.faq-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.faq-modal-header h4 {
+    margin: 0;
     color: var(--color-primary-darker);
 }
 
-.name-card input {
-    width: 100%;
-    padding: 0.7rem 0.9rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 1.03rem;
-    background: #ffffff;
-    transition: border-color 0.2s, box-shadow 0.2s;
+.faq-modal-close {
+    border: none;
+    background: #f1f5f9;
+    color: #334155;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, color 0.2s ease;
 }
 
-.name-card input:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+.faq-modal-close:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+.faq-placeholder {
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+    color: #64748b;
+    background: #f8fafc;
+    margin: 0.2rem 0 1rem;
+}
+
+.faq-list {
+    margin: 0;
+    padding-left: 1.2rem;
+    color: var(--color-text);
+    line-height: 1.55;
+}
+
+.faq-list li {
+    margin-bottom: 0.6rem;
+}
+
+.faq-list li strong {
+    color: var(--color-primary-darker);
+}
+
+@media (max-width: 640px) {
+    .method-header {
+        flex-direction: row;
+        align-items: center;
+    }
 }
 
 /* Адаптивность для маленьких экранов */

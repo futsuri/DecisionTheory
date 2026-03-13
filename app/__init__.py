@@ -1,5 +1,5 @@
 """
-app/__init__.py — Создание Flask-приложения, роуты, подключение MongoDB.
+app/__init__.py — Создание Flask-приложения, роуты, подключение PostgreSQL.
 Статический фронтенд сервируется из папки frontend/.
 """
 import os
@@ -8,7 +8,14 @@ from datetime import timezone
 from flask import Flask, jsonify, request, send_file, send_from_directory
 
 from app.config import Config
-from app.db import close_db, get_db, init_db
+from app.db import (
+    close_db,
+    count_reports,
+    get_report,
+    init_db,
+    list_reports,
+    clear_reports,
+)
 from app.reporter import generate_report
 from app.run_service import create_run, list_algorithms
 
@@ -48,7 +55,7 @@ def create_app(test_config=None):
         return send_from_directory(frontend_dir, filename)
 
     # ------------------------------------------------------------------
-    #  Инициализация MongoDB
+    #  Инициализация PostgreSQL
     # ------------------------------------------------------------------
     with app.app_context():
         try:
@@ -158,17 +165,16 @@ def create_app(test_config=None):
     def reports_list_route():
         """Список всех отчётов для страницы истории."""
         try:
-            db = get_db()
             page = request.args.get("page", 1, type=int)
             limit = request.args.get("limit", 50, type=int)
             limit = min(limit, 200)
             skip = (page - 1) * limit
 
-            cursor = db.reports.find().sort("created_at", -1).skip(skip).limit(limit)
-            total = db.reports.count_documents({})
+            rows = list_reports(limit, skip)
+            total = count_reports()
 
             items = []
-            for doc in cursor:
+            for doc in rows:
                 report_data = doc.get("report", {})
                 report_name = report_data.get("report_filename", "")
                 if not report_name and doc.get("created_at"):
@@ -177,20 +183,14 @@ def create_app(test_config=None):
                     local_dt = utc_dt.astimezone()
                     report_name = local_dt.strftime("%H_%M_%d_%m_%y")
 
-                # Гарантируем суффикс +00:00, т.к. pymongo может
-                # вернуть naive datetime (без tzinfo), а браузер
-                # без суффикса трактует строку как локальное время.
                 created_at_raw = doc.get("created_at")
                 if created_at_raw:
-                    iso = created_at_raw.isoformat()
-                    if not iso.endswith("Z") and "+" not in iso and "-" not in iso[19:]:
-                        iso += "+00:00"
-                    created_at_str = iso
+                    created_at_str = created_at_raw.isoformat()
                 else:
                     created_at_str = None
 
                 items.append({
-                    "id": str(doc.get("_id", "")),
+                    "id": str(doc.get("id", "")),
                     "run_id": doc.get("run_id", ""),
                     "algorithm_id": doc.get("algorithm_id") or report_data.get("algorithm_id", "unknown"),
                     "report_name": report_name,
@@ -210,10 +210,8 @@ def create_app(test_config=None):
     def reports_clear_route():
         """Очистить всю историю отчётов."""
         try:
-            db = get_db()
-            deleted = db.reports.delete_many({})
-            db.runs.delete_many({})
-            return jsonify({"deleted": deleted.deleted_count})
+            reports_deleted, _ = clear_reports()
+            return jsonify({"deleted": reports_deleted})
         except Exception as exc:
             return jsonify({"error": str(exc)}), 500
 
@@ -229,7 +227,7 @@ def create_app(test_config=None):
     def server_error(_):
         return jsonify({"error": "internal error"}), 500
 
-    # Закрываем Mongo-соединение при разрушении контекста
+    # Закрываем соединение при разрушении контекста
     app.teardown_appcontext(close_db)
     return app
 
@@ -237,8 +235,7 @@ def create_app(test_config=None):
 def _resolve_report_file(run_id, ext, base_dir, app):
     """Находит файл отчёта: сначала по пути из БД, потом fallback по run_id."""
     try:
-        db = get_db()
-        report_doc = db.reports.find_one({"run_id": run_id})
+        report_doc = get_report(run_id)
         if report_doc:
             report_data = report_doc.get("report", {})
             path_key = f"{ext}_path"

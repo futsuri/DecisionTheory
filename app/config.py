@@ -11,10 +11,12 @@ class Config:
     DEBUG = _get_bool("APP_DEBUG", "0")
     TESTING = _get_bool("APP_TESTING", "0")
 
-    # MongoDB
-    MONGO_URI = os.getenv("MONGO_URI", "mongodb://mongo:27017/decision_theory")
-    MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "decision_theory")
-    MONGO_TIMEOUT_MS = int(os.getenv("MONGO_TIMEOUT_MS", "3000"))
+    # PostgreSQL
+    POSTGRES_DSN = os.getenv(
+        "POSTGRES_DSN",
+        "postgresql://decision_user:decision_pass@postgres:5432/decision_theory",
+    )
+    POSTGRES_CONNECT_TIMEOUT = int(os.getenv("POSTGRES_CONNECT_TIMEOUT", "3"))
 
     # Доступные методы решения
     ALLOWED_METHODS = {"ahp", "multi_criteria"}

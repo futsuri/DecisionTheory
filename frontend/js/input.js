@@ -70,6 +70,138 @@ function getMethodNameById(id) {
 }
 
 // ────────────────────────────────────────────────
+// FAQ для методов
+function getFaqContent(algId) {
+    if (algId === "ahp") {
+        return [
+            {
+                q: "Как заполнять матрицы попарных сравнений?",
+                a: "Используйте шкалу Саати 1–9: 1 — равная важность, 9 — крайнее превосходство."
+            },
+            {
+                q: "Что означает зеркальная ячейка?",
+                a: "Она заполняется автоматически как обратное значение (1/x) для симметрии матрицы."
+            },
+            {
+                q: "Можно ли менять названия критериев и альтернатив?",
+                a: "Да, после изменения заголовки матриц обновятся автоматически."
+            }
+        ];
+    }
+
+    if (algId === "multi_criteria") {
+        return [
+            {
+                q: "Критерии и альтернативы",
+                a: "При заполнении данных пользователю необходимо располагать критерии в порядке убывания их важности (прибыль в самом вверху, как самое важное, риски в самом низу, как самое маловажное), у пользователя есть возможность выделить самый важный критерий вне зависимости от его расположения, нажав галочку в соответствующей строке."
+            },
+            {
+                q: "Выборы для главного критерия",
+                a: "Для главного критерия пользователь может выбрать тип функции, направление для оптимизации (ищем максимум или минимум), а также коэффициенты функции критерия (a1x + a2y + …). Поле ограничение для главного критерия недоступны, так как именно он оптимизируется."
+            },
+            {
+                q: "Выборы для остальных критериев",
+                a: "Для остальных критериев пользователь может выбрать тип функции, тип ограничения в поле направление функции (Если критерий предполагает максимизацию, используется ограничение вида ≥. Если минимизацию – ограничение вида ≤), коэффициенты для функции критерия, ограничения для данного критерия (не превосходит/не меньше заданного числа)."
+            }
+        ];
+    }
+
+    return null;
+}
+
+function getFaqPlaceholder(algId) {
+    if (algId === "ahp") {
+        return "В начале пользователю необходимо ввести варианты, среди которых ему необходимо выбрать наилучший – альтернативы, а также критерии, по которым будет происходить сравнение. После ввода чисел, пользователь должен нажать кнопку создать матрицы, для продолжения заполнения параметров. Пользователь может задать собственные имена для критериев и альтернатив.\n" +
+            "Дальнейшие значения для матриц задаются по шкале Саати (1–9), где 1 означает равную важность, а 9 — абсолютное превосходство одного элемента над другим.\n";
+    }
+
+    if (algId === "multi_criteria") {
+        return "В начале пользователю необходимо задать количество критериев и количество переменных оптимизации.\n" +
+            "Критерий – некая функция, значение которой необходимо максимизировать или минимизировать.\n";
+    }
+
+    return "Выберите алгоритм.";
+}
+
+function buildMethodHeader(title, algId) {
+    const faqItems = getFaqContent(algId);
+    if (!faqItems) {
+        return `<h3>${title}</h3>`;
+    }
+
+    const labelId = `faq-title-${algId}`;
+    const modalId = `faq-modal-${algId}`;
+    const listHtml = faqItems
+        .map(item => `<li><strong>${item.q}</strong> ${item.a}</li>`)
+        .join("");
+
+    const placeholderText = getFaqPlaceholder(algId);
+
+    return `
+        <div class="method-header">
+            <h3>${title}</h3>
+            <button type="button" class="faq-toggle" data-faq-target="${modalId}" aria-expanded="false" aria-controls="${modalId}" title="FAQ">?</button>
+        </div>
+        <div id="${modalId}" class="faq-modal" hidden>
+            <div class="faq-modal-backdrop" data-faq-close="true"></div>
+            <div class="faq-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="${labelId}">
+                <div class="faq-modal-header">
+                    <h4 id="${labelId}">FAQ</h4>
+                    <button type="button" class="faq-modal-close" data-faq-close="true" aria-label="Закрыть">×</button>
+                </div>
+                <div class="faq-placeholder">${placeholderText}</div>
+                <ul class="faq-list">${listHtml}</ul>
+            </div>
+        </div>
+    `;
+}
+
+function initFaqToggle(container) {
+    const toggle = container.querySelector(".faq-toggle");
+    if (!toggle) {
+        return;
+    }
+
+    const modalId = toggle.dataset.faqTarget;
+    const modal = container.querySelector(`#${modalId}`);
+    if (!modal) {
+        return;
+    }
+
+    const closeTriggers = modal.querySelectorAll("[data-faq-close]");
+
+    const closeModal = () => {
+        modal.setAttribute("hidden", "");
+        toggle.setAttribute("aria-expanded", "false");
+        document.removeEventListener("keydown", handleKeydown);
+    };
+
+    const handleKeydown = (event) => {
+        if (event.key === "Escape") {
+            closeModal();
+        }
+    };
+
+    const openModal = () => {
+        modal.removeAttribute("hidden");
+        toggle.setAttribute("aria-expanded", "true");
+        document.addEventListener("keydown", handleKeydown);
+    };
+
+    toggle.addEventListener("click", openModal);
+
+    closeTriggers.forEach(trigger => {
+        trigger.addEventListener("click", closeModal);
+    });
+
+    modal.addEventListener("click", (event) => {
+        if (event.target.classList.contains("faq-modal-backdrop")) {
+            closeModal();
+        }
+    });
+}
+
+// ────────────────────────────────────────────────
 // Отрисовка формы в зависимости от метода
 function renderInputForm(algId, container) {
     container.innerHTML = '<div class="form-inner"></div>';
@@ -77,7 +209,7 @@ function renderInputForm(algId, container) {
 
     if (algId === "ahp") {
        inner.innerHTML = `
-            <h3>Метод анализа иерархий (AHP)</h3>
+            ${buildMethodHeader("Метод анализа иерархий (AHP)", "ahp")}
 
             <div class="setup-block setup-centered">
                 <div class="setup-row">
@@ -101,6 +233,8 @@ function renderInputForm(algId, container) {
                 Запустить расчёт AHP
             </button>
         `;
+
+        initFaqToggle(inner);
 
         // ==================== Обработчик кнопки "Создать структуру" ====================
         document.getElementById("generate-struct").addEventListener("click", () => {
@@ -135,7 +269,7 @@ function renderInputForm(algId, container) {
 
        } else if (algId === "multi_criteria") {
         inner.innerHTML = `
-            <h3>Метод главного критерия</h3>
+            ${buildMethodHeader("Метод главного критерия", "multi_criteria")}
 
             <div class="setup-block setup-centered" style="margin:1.5rem 0;">
                 <div class="setup-row">
@@ -161,6 +295,8 @@ function renderInputForm(algId, container) {
                 Запустить оптимизацию
             </button>
         `;
+
+        initFaqToggle(inner);
 
         document.getElementById("generate-mc-form").addEventListener("click", () => {
             const dim = parseInt(document.getElementById("dim-count").value);
@@ -242,7 +378,7 @@ function generateAHPStructure(critCount, altCount, inner) {
                     type="text"
                     id="alt-${i-1}"
                     class="alt-name"
-                    value="Альтернатива ${i}"
+                    value="Альтернатиива ${i}"
                     placeholder="Введите название..."
                 >
             </div>
@@ -449,7 +585,7 @@ function renderPairwiseMatrix(containerId, size, type = "crit") {
     html += '</tr></thead><tbody>';
 
     for (let i = 0; i < size; i++) {
-        const rowLabel = names[i] || (type === "crit" ? `Критерий ${i+1}` : `Альтернатива ${i+1}`);
+        const rowLabel = names[i] || (type === "crit" ? `Критерий ${i+1}` : `Альтернатиива ${i+1}`);
         html += `<tr><th title="${rowLabel}">${rowLabel}</th>`;
         for (let j = 0; j < size; j++) {
             if (i === j) {

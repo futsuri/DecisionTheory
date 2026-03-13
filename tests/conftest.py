@@ -11,8 +11,7 @@ def app():
     """Создаёт тестовое Flask-приложение с TESTING=True."""
     test_config = {
         "TESTING": True,
-        "MONGO_URI": "mongodb://localhost:27017",
-        "MONGO_DB_NAME": "decision_theory_test",
+        "POSTGRES_DSN": "postgresql://decision_user:decision_pass@localhost:5432/decision_theory_test",
     }
     _app = create_app(test_config=test_config)
     yield _app

@@ -2,15 +2,15 @@
 run_service.py — Логика запуска:
   • валидация входных данных
   • диспатч на нужный алгоритм
-  • сохранение run и report в MongoDB
+  • сохранение run и report в PostgreSQL
 """
 import numpy as np
-from bson.objectid import ObjectId
+import uuid
 from flask import current_app
 
 from app.algorithms.ahp import run_ahp
 from app.algorithms.multi_criteria import run_multi_criteria
-from app.db import get_db, insert_doc, update_doc
+from app.db import get_run as fetch_run, insert_report, insert_run, update_run
 from app.reporter import build_report
 from app.utils import (
     utc_now,
@@ -71,13 +71,14 @@ def create_run(algorithm_id, input_data):
         "updated_at": now,
     }
 
-    run_id = insert_doc("runs", run_doc)
-    run_obj_id = ObjectId(run_id)
+    run_id = str(uuid.uuid4())
+    run_doc["id"] = run_id
+    insert_run(run_doc)
 
     try:
         result = _dispatch(algorithm_id, normalized_input)
         result = _sanitize_result(result)
-        update_doc("runs", {"_id": run_obj_id}, {
+        update_run(run_id, {
             "status": "done",
             "result": result,
             "updated_at": utc_now(),
@@ -91,9 +92,9 @@ def create_run(algorithm_id, input_data):
             "created_at": utc_now(),
             "updated_at": utc_now(),
         }
-        insert_doc("reports", report_doc)
+        insert_report(report_doc)
     except Exception as exc:
-        update_doc("runs", {"_id": run_obj_id}, {
+        update_run(run_id, {
             "status": "error",
             "error": str(exc),
             "updated_at": utc_now(),
@@ -104,12 +105,7 @@ def create_run(algorithm_id, input_data):
 
 
 def get_run(run_id):
-    db = get_db()
-    try:
-        obj_id = ObjectId(run_id)
-    except Exception:
-        return None
-    return db.runs.find_one({"_id": obj_id})
+    return fetch_run(run_id)
 
 
 def _normalize_input(algorithm_id, input_data):
@@ -124,7 +120,7 @@ def _sanitize_result(obj):
     """Рекурсивно конвертирует numpy-типы в нативные Python-типы.
 
     scipy возвращает numpy.bool_, numpy.float64 и т.д., которые
-    BSON-энкодер pymongo не умеет сериализовать. Эта функция
+    JSON-энкодеры не всегда умеют сериализовать. Эта функция
     обходит весь результат и приводит всё к int/float/bool/str/list/dict.
     """
     if isinstance(obj, dict):

@@ -1,7 +1,7 @@
 # DecisionTheory
 
 Flask-приложение с методами принятия решений (AHP и многокритериальная оптимизация),
-статическим frontend и сохранением результатов в MongoDB. Сейчас доступен только AHP.
+статическим frontend и сохранением результатов в PostgreSQL. Сейчас доступен только AHP.
 
 ## Быстрый запуск (локально)
 
@@ -9,7 +9,7 @@ Flask-приложение с методами принятия решений (
    ```bash
    pip install -r requirements.txt
    ```
-2. Убедитесь, что MongoDB доступна (по умолчанию `mongodb://mongo:27017/decision_theory`).
+2. Убедитесь, что PostgreSQL доступна (по умолчанию `postgresql://decision_user:decision_pass@postgres:5432/decision_theory`).
 3. Запустите сервер:
    ```bash
    python run.py
@@ -50,14 +50,14 @@ Frontend доступен на `http://localhost:8000`.
 DecisionTheory/
 │
 ├─ app/                        # Backend (Flask)
-│   ├─ __init__.py             # Создание Flask-приложения, роуты, подключение MongoDB
+│   ├─ __init__.py             # Создание Flask-приложения, роуты, подключение PostgreSQL
 │   ├─ algorithms/             # Реализации методов
 │   │   ├─ ahp.py              # Метод аналитической иерархии (AHP): дискретные данные, проверка consistency (CR >0.1 — ошибка + предложения по фиксу)
 │   │   └─ multi_criteria.py   # Многокритериальная оптимизация: непрерывные данные, функции (линейная для прибыли, квадратичная для расстояния, экспоненциальная для логистики, логарифмическая для энтропии). Подметод: напр., главный критерий (зафиксируйте один).
-│   ├─ run_service.py          # Логика запуска: валидация, вызов алгоритма, сравнительный анализ (симуляция сценариев), сохранение в MongoDB
+│   ├─ run_service.py          # Логика запуска: валидация, вызов алгоритма, сравнительный анализ (симуляция сценариев), сохранение в PostgreSQL
 │   ├─ reporter.py             # Генерация отчета (текст + base64-графики)
-│   ├─ utils.py                # Вспомогательные: валидация, графики (Matplotlib), MongoDB-хелперы
-│   └─ db.py                   # Подключение к MongoDB (аналог mongo.py в оригинале)
+│   ├─ utils.py                # Вспомогательные: валидация, графики (Matplotlib)
+│   └─ db.py                   # Подключение к PostgreSQL
 │
 ├─ frontend/                   # Статический frontend (сервируется Flask'ом)
 │   ├─ css/                    # Стили
@@ -78,9 +78,9 @@ DecisionTheory/
 │
 ├─ docker/                     # Docker
 │   ├─ Dockerfile              # Для backend-образа (копирует app, устанавливает зависимости)
-│   └─ docker-compose.yml     # Запускает backend + MongoDB (volumes для данных)
+│   └─ docker-compose.yml     # Запускает backend + PostgreSQL (volumes для данных)
 │
-├─ requirements.txt            # Зависимости: flask, numpy, scipy, matplotlib, pymongo, pytest
+├─ requirements.txt            # Зависимости: flask, numpy, scipy, matplotlib, psycopg, pytest
 ├─ README.md                   # Инструкции: как запустить (docker-compose up), добавить алгоритм, тесты
 └─ run.py                      # Локальный запуск без Docker: python run.py
 ```
