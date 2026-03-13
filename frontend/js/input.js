@@ -69,7 +69,6 @@ function getMethodNameById(id) {
     return map[id] || `Метод ${id}`;
 }
 
-// ────────────────────────────────────────────────
 // FAQ для методов
 function getFaqContent(algId) {
     if (algId === "ahp") {
@@ -121,83 +120,105 @@ function getFaqPlaceholder(algId) {
     return "Выберите алгоритм.";
 }
 
-function buildMethodHeader(title, algId) {
-    const faqItems = getFaqContent(algId);
-    if (!faqItems) {
-        return `<h3>${title}</h3>`;
-    }
-
-    const labelId = `faq-title-${algId}`;
-    const modalId = `faq-modal-${algId}`;
-    const listHtml = faqItems
-        .map(item => `<li><strong>${item.q}</strong> ${item.a}</li>`)
-        .join("");
-
-    const placeholderText = getFaqPlaceholder(algId);
-
+function buildMethodHeaderHtml(title) {
     return `
         <div class="method-header">
             <h3>${title}</h3>
-            <button type="button" class="faq-toggle" data-faq-target="${modalId}" aria-expanded="false" aria-controls="${modalId}" title="FAQ">?</button>
-        </div>
-        <div id="${modalId}" class="faq-modal" hidden>
-            <div class="faq-modal-backdrop" data-faq-close="true"></div>
-            <div class="faq-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="${labelId}">
-                <div class="faq-modal-header">
-                    <h4 id="${labelId}">FAQ</h4>
-                    <button type="button" class="faq-modal-close" data-faq-close="true" aria-label="Закрыть">×</button>
-                </div>
-                <div class="faq-placeholder">${placeholderText}</div>
-                <ul class="faq-list">${listHtml}</ul>
-            </div>
+            <button type="button" class="faq-toggle" aria-label="FAQ" aria-expanded="false">?</button>
         </div>
     `;
 }
 
-function initFaqToggle(container) {
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function formatFaqText(value) {
+    return escapeHtml(value).replace(/\n/g, "<br>");
+}
+
+function renderFaqModal(algId, title, container) {
+    const modalId = `faq-modal-${algId}`;
+    const existing = container.querySelector(`#${modalId}`);
+    if (existing) {
+        existing.remove();
+    }
+
+    const faqItems = getFaqContent(algId) || [];
+    const placeholder = getFaqPlaceholder(algId);
+
+    const listHtml = faqItems.length
+        ? `
+            <ul class="faq-list">
+                ${faqItems.map(item => `
+                    <li>
+                        <strong>${escapeHtml(item.q)}</strong><br>
+                        ${formatFaqText(item.a)}
+                    </li>
+                `).join("")}
+            </ul>
+        `
+        : "";
+
+    const placeholderHtml = placeholder
+        ? `<div class="faq-placeholder">${formatFaqText(placeholder)}</div>`
+        : "";
+
+    const modal = document.createElement("div");
+    modal.className = "faq-modal";
+    modal.id = modalId;
+    modal.hidden = true;
+    modal.innerHTML = `
+        <div class="faq-modal-backdrop" data-faq-close></div>
+        <div class="faq-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="${modalId}-title">
+            <div class="faq-modal-header">
+                <h4 id="${modalId}-title">FAQ — ${escapeHtml(title)}</h4>
+                <button type="button" class="faq-modal-close" aria-label="Закрыть">×</button>
+            </div>
+            ${placeholderHtml}
+            ${listHtml}
+        </div>
+    `;
+
+    container.appendChild(modal);
+
     const toggle = container.querySelector(".faq-toggle");
     if (!toggle) {
         return;
     }
 
-    const modalId = toggle.dataset.faqTarget;
-    const modal = container.querySelector(`#${modalId}`);
-    if (!modal) {
-        return;
-    }
-
-    const closeTriggers = modal.querySelectorAll("[data-faq-close]");
+    const closeBtn = modal.querySelector(".faq-modal-close");
+    const backdrop = modal.querySelector(".faq-modal-backdrop");
 
     const closeModal = () => {
-        modal.setAttribute("hidden", "");
+        modal.hidden = true;
         toggle.setAttribute("aria-expanded", "false");
-        document.removeEventListener("keydown", handleKeydown);
+        document.removeEventListener("keydown", handleEsc);
     };
 
-    const handleKeydown = (event) => {
+    const handleEsc = (event) => {
         if (event.key === "Escape") {
             closeModal();
         }
     };
 
-    const openModal = () => {
-        modal.removeAttribute("hidden");
+    toggle.setAttribute("aria-controls", modalId);
+    toggle.addEventListener("click", () => {
+        modal.hidden = false;
         toggle.setAttribute("aria-expanded", "true");
-        document.addEventListener("keydown", handleKeydown);
-    };
-
-    toggle.addEventListener("click", openModal);
-
-    closeTriggers.forEach(trigger => {
-        trigger.addEventListener("click", closeModal);
+        document.addEventListener("keydown", handleEsc);
+        closeBtn.focus();
     });
 
-    modal.addEventListener("click", (event) => {
-        if (event.target.classList.contains("faq-modal-backdrop")) {
-            closeModal();
-        }
-    });
+    closeBtn.addEventListener("click", closeModal);
+    backdrop.addEventListener("click", closeModal);
 }
+
 
 // ────────────────────────────────────────────────
 // Отрисовка формы в зависимости от метода
@@ -207,7 +228,7 @@ function renderInputForm(algId, container) {
 
     if (algId === "ahp") {
        inner.innerHTML = `
-            ${buildMethodHeader("Метод анализа иерархий (AHP)", "ahp")}
+            ${buildMethodHeaderHtml("Метод анализа иерархий (AHP)")}
 
             <div class="setup-block setup-centered">
                 <div class="setup-row">
@@ -232,7 +253,7 @@ function renderInputForm(algId, container) {
             </button>
         `;
 
-        initFaqToggle(inner);
+        renderFaqModal(algId, "Метод анализа иерархий (AHP)", container);
 
         // ==================== Обработчик кнопки "Создать структуру" ====================
         document.getElementById("generate-struct").addEventListener("click", () => {
@@ -240,7 +261,7 @@ function renderInputForm(algId, container) {
             const altCount  = parseInt(document.getElementById("alt-count").value);
 
             if (critCount < 2 || critCount > 20 || altCount < 2 || altCount > 20) {
-                alert("Количество критериев и альтернатив должно быть от 2 до 20");
+                alert("Количество критериев и альтернатив должно быть от 2 до 9");
                 return;
             }
 
@@ -267,7 +288,7 @@ function renderInputForm(algId, container) {
 
        } else if (algId === "multi_criteria") {
         inner.innerHTML = `
-            ${buildMethodHeader("Метод главного критерия", "multi_criteria")}
+            ${buildMethodHeaderHtml("Метод главного критерия")}
 
             <div class="setup-block setup-centered" style="margin:1.5rem 0;">
                 <div class="setup-row">
@@ -294,7 +315,7 @@ function renderInputForm(algId, container) {
             </button>
         `;
 
-        initFaqToggle(inner);
+        renderFaqModal(algId, "Метод главного критерия", container);
 
         document.getElementById("generate-mc-form").addEventListener("click", () => {
             const dim = parseInt(document.getElementById("dim-count").value);
