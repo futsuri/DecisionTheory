@@ -112,37 +112,45 @@ class MultiCriteriaModel:
         coeffs = params.get("coeffs", [])
         
         if func_type == "linear":
-            # f(x) = a1*x1 + a2*x2 + ...
-            result = 0.0
+            # f(x) = c0 + c1*x1 + c2*x2 + ...
+            result = coeffs[0] if len(coeffs) > 0 else 0.0
             for i, xi in enumerate(x):
-                if i < len(coeffs):
-                    result += coeffs[i] * xi
+                if i + 1 < len(coeffs):
+                    result += coeffs[i + 1] * xi
             return result
         
         elif func_type == "quadratic":
-            # f(x) = a1*x1^2 + a2*x2^2 + ...
-            result = 0.0
-            for i, xi in enumerate(x):
-                if i < len(coeffs):
-                    result += coeffs[i] * (xi ** 2)
+            # f(x) = c0 + c1*x1 + ... + c11*x1^2 + c12*x1*x2 + ...
+            result = coeffs[0] if len(coeffs) > 0 else 0.0
+            n = len(x)
+            idx = 1
+            for i in range(n):
+                if idx < len(coeffs):
+                    result += coeffs[idx] * x[i]
+                    idx += 1
+            for i in range(n):
+                for j in range(i, n):
+                    if idx < len(coeffs):
+                        result += coeffs[idx] * x[i] * x[j]
+                        idx += 1
             return result
         
         elif func_type == "exponential":
-            # f(x) = a1*exp(x1) + a2*exp(x2) + ...
-            result = 0.0
+            # f(x) = c0 + c1*exp(x1) + c2*exp(x2) + ...
+            result = coeffs[0] if len(coeffs) > 0 else 0.0
             for i, xi in enumerate(x):
-                if i < len(coeffs):
-                    result += coeffs[i] * math.exp(xi)
+                if i + 1 < len(coeffs):
+                    result += coeffs[i + 1] * math.exp(xi)
             return result
         
         elif func_type == "logarithmic":
-            # f(x) = a1*ln(x1) + a2*ln(x2) + ...
-            result = 0.0
+            # f(x) = c0 + c1*ln(x1) + c2*ln(x2) + ...
+            result = coeffs[0] if len(coeffs) > 0 else 0.0
             for i, xi in enumerate(x):
-                if i < len(coeffs):
+                if i + 1 < len(coeffs):
                     if xi <= 0:
                         raise ValueError(f"Логарифмическая функция требует x[{i}] > 0")
-                    result += coeffs[i] * math.log(xi)
+                    result += coeffs[i + 1] * math.log(xi)
             return result
         
         else:
@@ -263,8 +271,11 @@ class MultiCriteriaModel:
                 )
             
             self.solution = result.x.tolist()
-            self.objective_value = -result.fun if self.criteria[self.main_criterion_idx].get("direction") == "max" else result.fun
-            self.is_feasible = result.success
+            if self.criteria[self.main_criterion_idx].get("direction") == "max":
+                self.objective_value = float(-result.fun)
+            else:
+                self.objective_value = float(result.fun)
+            self.is_feasible = bool(result.success)
             
         except Exception as e:
             print(f"ERROR: scipy.optimize failed: {e}")
@@ -294,7 +305,7 @@ class MultiCriteriaModel:
                 "solution": self.solution,
                 "objective_value": self.objective_value,
                 "all_criteria": self.all_criteria_values,
-                "is_feasible": self.is_feasible
+                "is_feasible": bool(self.is_feasible)
             }
         }
 
@@ -311,13 +322,13 @@ def run_demo():
             "name": "Прибыль",
             "func_type": "linear",
             "direction": "max",
-            "params": {"coeffs": [50, 40]}  # 50*x1 + 40*x2
+            "params": {"coeffs": [0, 50, 40]}  # 50*x1 + 40*x2
         },
         {
             "name": "Экология",
             "func_type": "linear",
             "direction": "min",
-            "params": {"coeffs": [2, 3]}  # 2*x1 + 3*x2
+            "params": {"coeffs": [0, 2, 3]}  # 2*x1 + 3*x2
         }
     ],
     "constraints": {

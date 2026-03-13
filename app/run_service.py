@@ -415,10 +415,13 @@ def _validate_multi_criteria_deep(payload):
             raise ValueError(
                 f"MultiCriteria: criteria[{i}] ('{name}') — 'params.coeffs' должен быть непустым списком"
             )
-        if len(coeffs) != dim:
+        required_len = 1 + dim
+        if func_type == "quadratic":
+            required_len = 1 + dim + (dim * (dim + 1)) // 2
+        if len(coeffs) != required_len:
             raise ValueError(
                 f"MultiCriteria: criteria[{i}] ('{name}') — число коэффициентов ({len(coeffs)}) "
-                f"должно совпадать с размерностью ({dim})"
+                f"должно быть {required_len} для типа '{func_type}' при размерности {dim}"
             )
         for j, v in enumerate(coeffs):
             try:
