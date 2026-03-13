@@ -2,10 +2,7 @@
 import math
 import json
 import pytest
-from app.algorithms.multi_criteria import (
-    MultiCriteriaModel,
-    run_multi_criteria,
-)
+from app.algorithms.multi_criteria import MultiCriteriaModel, run_multi_criteria
 
 
 
@@ -81,7 +78,7 @@ def test_quadratic_minimization():
 
 
 def test_exponential_maximization_single_var():
-    # проверка экспонинцеальной функции
+    # проверка экспоненциальной функции
     payload = {
         "criteria": [
             {"name": "exp", "func_type": "exponential", "direction": "max", "params": {"coeffs": [0, 1]}}
@@ -94,6 +91,24 @@ def test_exponential_maximization_single_var():
     sol = res["ranking"][0]["solution"]
     assert pytest.approx(1.0, rel=1e-3) == sol[0]
     assert pytest.approx(math.exp(1.0), rel=1e-3) == res["ranking"][0]["objective_value"]
+
+def test_logarithmic_case():
+    # проверка логарифмической функции
+    payload = {
+        "criteria": [
+            {"name": "Логарифм", "func_type": "logarithmic", "direction": "max",
+             "params": {"coeffs": [0, 1, 1]}},    # ln(x1) + ln(x2)
+            {"name": "Ограничитель", "func_type": "linear", "direction": "min",
+             "params": {"coeffs": [0, 1, 1]}}
+        ],
+        "constraints": {"Ограничитель": {"max": 8}},  # x1+x2 <= 8
+        "main_criterion": "Логарифм",
+        "variable_bounds": [(0.1, 10), (0.1, 10)]   # нижняя граница >0 для логарифма
+    }
+    result = run_multi_criteria(payload)
+    assert result["is_feasible"] is True
+    sol = result["ranking"][0]["solution"]
+    assert sol[0] > 0 and sol[1] > 0
 
 
 def test_constraints_thresholds_limit_solution():
@@ -297,3 +312,7 @@ def test_differential_evolution_method():
 
     assert m.is_feasible is True
     assert pytest.approx(10, rel=1e-2) == m.solution[0]
+
+'''-----------------------------------'''
+
+

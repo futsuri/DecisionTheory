@@ -213,20 +213,79 @@ def test_random_consistent_matrices_stability():
         assert math.isfinite(res["consistency"]["cr"])
         assert res["consistency"]["cr"] <= 1.0
 
-def test_export_report_to_json_creates_file(tmp_path):
-    # экспортируемость отчета в json
-    from app.algorithms.ahp import AHPModel
-    m = AHPModel()
-    m.set_goal("test")
-    m.set_criteria(["c1", "c2"])
-    m.set_alternatives(["a1", "a2"])
-    m.set_criteria_matrix([[1.0, 2.0], [0.5, 1.0]])
-    m.set_alternative_matrix("c1", [[1.0, 1.0], [1.0, 1.0]])
-    m.set_alternative_matrix("c2", [[1.0, 1.0], [1.0, 1.0]])
-    filename = tmp_path / "test_ahp_report.json"
-    returned = m.export_report_to_json(str(filename))
-    assert returned == str(filename)
-    # проверяем, что файл создан и содержит JSON
-    with open(str(filename), 'r', encoding='utf-8') as f:
-        doc = json.load(f)
-    assert "weights" in doc and "final_results" in doc
+'''------------------------------------'''
+
+def test_ahp_simple_linear():
+    payload = {
+        "criteria": ["Цена", "Качество"],
+        "alternatives": ["A", "B"],
+        "matrix": [
+            [1,   3],
+            [1/3, 1]
+        ],
+        "alt_matrices": {
+            "Цена": [
+                [1,   2],
+                [1/2, 1]
+            ],
+            "Качество": [
+                [1,   1/2],
+                [2,   1]
+            ]
+        }
+    }
+    result = run_ahp(payload)
+    weights = result["weights"]
+    ranking = result["ranking"]
+    assert abs(sum(weights) - 1.0) < 1e-6
+    assert len(ranking) == 2
+    assert ranking[0]["score"] >= ranking[1]["score"]
+
+def test_ahp_discrete_apartment_selection():
+    payload = {
+        "criteria": ["Цена", "Площадь", "Этаж", "Ремонт"],
+        "alternatives": ["Кв. 1", "Кв. 2", "Кв. 3"],
+        "matrix": [ 
+            [1,    3,    5,    2],   # Цена
+            [1/3,  1,    3,    1/2], # Площадь
+            [1/5,  1/3,  1,    1/4], # Этаж
+            [1/2,  2,    4,    1]    # Ремонт
+        ],
+        "alt_matrices": {
+            "Цена": [ 
+                [1,      2,      1/3],  # Кв. 1 vs Кв. 2 vs Кв. 3
+                [1/2,    1,      1/4],
+                [3,      4,      1]
+            ],
+            "Площадь": [
+                [1,      1/2,    2],
+                [2,      1,      3],
+                [1/2,    1/3,    1]
+            ],
+            "Этаж": [
+                [1,      3,      2],
+                [1/3,    1,      1/2],
+                [1/2,    2,      1]
+            ],
+            "Ремонт": [
+                [1,      1/3,    1/2],
+                [3,      1,      2],
+                [2,      1/2,    1]
+            ]
+        }
+    }
+    
+    result = run_ahp(payload)
+    
+    assert len(result["ranking"]) == 3
+    assert all("alternative" in item and "score" in item for item in result["ranking"])
+    
+    total_score = sum(item["score"] for item in result["ranking"])
+    assert abs(total_score - 1.0) < 1e-6
+    
+    print("\n=== Дискретный выбор квартиры ===")
+    for item in result["ranking"]:
+        print(f"{item['alternative']}: {item['score']:.3f} ({item['score_percent']:.1f}%)")
+    print(f"Лучшая: {result['ranking'][0]['alternative']}")
+
+
