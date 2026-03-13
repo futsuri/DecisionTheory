@@ -22,9 +22,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (items.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
-                    <p>Отчётов пока нет</p>
+                    <p>Отчётов пока нет :<</p>
                     <p style="color:var(--color-text-light); font-size:0.95rem;">
-                        Запустите расчёт, и он появится здесь
+                        Запустите расчёт, и он сразу появится здесь!
                     </p>
                     <button onclick="goHome()" class="primary-btn" style="margin-top:1.5rem;">
                         Перейти к расчётам
