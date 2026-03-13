@@ -1,17 +1,28 @@
 from flask import current_app, g
-import psycopg
-from psycopg.rows import dict_row
-from psycopg.types.json import Jsonb
 
 
 # ---------------------------------------------------------------------------
 #  Подключение к PostgreSQL
 # ---------------------------------------------------------------------------
 
+def _import_psycopg():
+    try:
+        import psycopg
+        from psycopg.rows import dict_row
+        from psycopg.types.json import Jsonb
+    except Exception as exc:
+        raise RuntimeError(
+            "psycopg is required for PostgreSQL access. "
+            "Install psycopg[binary] or provide libpq."
+        ) from exc
+    return psycopg, dict_row, Jsonb
+
+
 def get_conn():
     """Возвращает соединение PostgreSQL, привязанное к app-контексту (g)."""
     conn = g.get("_pg_conn")
     if conn is None:
+        psycopg, dict_row, _ = _import_psycopg()
         conn = psycopg.connect(
             current_app.config["POSTGRES_DSN"],
             connect_timeout=current_app.config["POSTGRES_CONNECT_TIMEOUT"],
@@ -74,6 +85,7 @@ def close_db(_=None):
 def _to_jsonb(value):
     if value is None:
         return None
+    _, _, Jsonb = _import_psycopg()
     return Jsonb(value)
 
 
