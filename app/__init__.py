@@ -12,6 +12,7 @@ from app.db import (
     close_db,
     count_reports,
     get_report,
+    get_run,
     init_db,
     list_reports,
     clear_reports,
@@ -114,6 +115,18 @@ def create_app(test_config=None):
         except Exception as exc:
             return jsonify({"error": str(exc)}), 500
         return jsonify({"run_id": run_id}), 201
+
+    @app.route("/api/runs/<run_id>", methods=["GET"])
+    def run_route(run_id):
+        """Получить входные данные run по run_id."""
+        run_doc = get_run(run_id)
+        if not run_doc:
+            return jsonify({"error": "not found"}), 404
+        return jsonify({
+            "run_id": run_doc.get("id"),
+            "algorithm_id": run_doc.get("algorithm_id"),
+            "input": run_doc.get("input"),
+        })
 
     # ------------------------------------------------------------------
     #  Отчёт
@@ -226,6 +239,165 @@ def create_app(test_config=None):
     @app.errorhandler(500)
     def server_error(_):
         return jsonify({"error": "internal error"}), 500
+
+    @app.route("/api/docs", methods=["GET"])
+    def api_docs():
+        """Документация по API сайта (JSON)."""
+        return jsonify({
+            "title": "DecisionTheory API",
+            "version": "1.0",
+            "base_url": "/",
+            "endpoints": [
+                {
+                    "method": "GET",
+                    "path": "/health",
+                    "description": "Проверка доступности приложения.",
+                },
+                {
+                    "method": "GET",
+                    "path": "/api/health",
+                    "description": "Проверка API и среды выполнения.",
+                },
+                {
+                    "method": "GET",
+                    "path": "/api/ready",
+                    "description": "Проверка готовности БД.",
+                },
+                {
+                    "method": "GET",
+                    "path": "/api/algorithms",
+                    "description": "Список доступных алгоритмов.",
+                },
+                {
+                    "method": "POST",
+                    "path": "/api/runs",
+                    "description": "Создать расчет (run).",
+                    "body": {
+                        "algorithm_id": "ahp | multi_criteria",
+                        "input": "object",
+                    },
+                    "responses": {
+                        "201": {"run_id": "uuid"},
+                    },
+                },
+                {
+                    "method": "GET",
+                    "path": "/api/runs/<run_id>",
+                    "description": "Получить входные данные run.",
+                },
+                {
+                    "method": "GET",
+                    "path": "/api/reports",
+                    "description": "Список отчетов с пагинацией.",
+                    "query": {
+                        "page": "int (default 1)",
+                        "limit": "int (default 50, max 200)",
+                    },
+                },
+                {
+                    "method": "DELETE",
+                    "path": "/api/reports",
+                    "description": "Удалить историю отчетов.",
+                },
+                {
+                    "method": "GET",
+                    "path": "/api/reports/<run_id>",
+                    "description": "Получить отчет по run_id.",
+                },
+                {
+                    "method": "GET",
+                    "path": "/api/reports/<run_id>/csv",
+                    "description": "Скачать CSV отчет.",
+                },
+                {
+                    "method": "GET",
+                    "path": "/api/reports/<run_id>/pdf",
+                    "description": "Скачать PDF отчет.",
+                },
+            ],
+        })
+
+    @app.route("/docs", methods=["GET"])
+    def docs_page():
+        """HTML-документация веб-сервиса."""
+        return """
+<!DOCTYPE html>
+<html lang=\"ru\">
+<head>
+  <meta charset=\"UTF-8\">
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+  <title>Документация API</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; color: #0f172a; }
+    h1, h2 { color: #1e40af; }
+    code { background: #f1f5f9; padding: 0.1rem 0.3rem; border-radius: 4px; }
+    pre { background: #f8fafc; padding: 1rem; border-radius: 8px; overflow: auto; }
+    .endpoint { margin: 1rem 0; padding: 0.8rem; border: 1px solid #e2e8f0; border-radius: 8px; }
+    .method { font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>Документация веб-сервиса</h1>
+  <p>Дата обновления: 13.03.2026</p>
+
+  <h2>Базовые проверки</h2>
+  <div class=\"endpoint\">
+    <div><span class=\"method\">GET</span> <code>/health</code></div>
+    <p>Проверка доступности приложения.</p>
+  </div>
+  <div class=\"endpoint\">
+    <div><span class=\"method\">GET</span> <code>/api/health</code></div>
+    <p>Проверка API и среды выполнения.</p>
+  </div>
+  <div class=\"endpoint\">
+    <div><span class=\"method\">GET</span> <code>/api/ready</code></div>
+    <p>Проверка готовности базы данных.</p>
+  </div>
+
+  <h2>Алгоритмы</h2>
+  <div class=\"endpoint\">
+    <div><span class=\"method\">GET</span> <code>/api/algorithms</code></div>
+    <p>Список доступных алгоритмов.</p>
+  </div>
+
+  <h2>Запуски (runs)</h2>
+  <div class=\"endpoint\">
+    <div><span class=\"method\">POST</span> <code>/api/runs</code></div>
+    <p>Создать расчет и получить <code>run_id</code>.</p>
+    <pre>{
+  "algorithm_id": "ahp | multi_criteria",
+  "input": { ... }
+}</pre>
+  </div>
+  <div class=\"endpoint\">
+    <div><span class=\"method\">GET</span> <code>/api/runs/&lt;run_id&gt;</code></div>
+    <p>Получить входные данные run.</p>
+  </div>
+
+  <h2>Отчеты</h2>
+  <div class=\"endpoint\">
+    <div><span class=\"method\">GET</span> <code>/api/reports</code></div>
+    <p>Список отчетов с пагинацией. Параметры: <code>page</code>, <code>limit</code>.</p>
+  </div>
+  <div class=\"endpoint\">
+    <div><span class=\"method\">GET</span> <code>/api/reports/&lt;run_id&gt;</code></div>
+    <p>Получить отчет по <code>run_id</code>.</p>
+  </div>
+  <div class=\"endpoint\">
+    <div><span class=\"method\">GET</span> <code>/api/reports/&lt;run_id&gt;/csv</code></div>
+    <p>Скачать CSV-отчет.</p>
+  </div>
+  <div class=\"endpoint\">
+    <div><span class=\"method\">GET</span> <code>/api/reports/&lt;run_id&gt;/pdf</code></div>
+    <p>Скачать PDF-отчет.</p>
+  </div>
+  <div class=\"endpoint\">
+    <div><span class=\"method\">DELETE</span> <code>/api/reports</code></div>
+    <p>Очистить историю отчетов.</p>
+  </div>
+</body>
+</html>
+"""
 
     # Закрываем соединение при разрушении контекста
     app.teardown_appcontext(close_db)

@@ -99,6 +99,78 @@ async function fetchReport(runId) {
   return await res.json();
 }
 
+async function fetchRun(runId) {
+  if (APP_MODE === "demo") {
+    const isMulti = /002/.test(runId);
+    if (isMulti) {
+      return {
+        run_id: runId,
+        algorithm_id: "multi_criteria",
+        input: {
+          criteria: [
+            {
+              name: "Прибыль",
+              func_type: "linear",
+              direction: "max",
+              params: { coeffs: [1, 0.5, 0.2] }
+            },
+            {
+              name: "Риск",
+              func_type: "quadratic",
+              direction: "min",
+              params: { coeffs: [0.2, 1, 0] }
+            },
+            {
+              name: "Стабильность",
+              func_type: "linear",
+              direction: "max",
+              params: { coeffs: [0.4, 0.4, 0.4] }
+            }
+          ],
+          constraints: {
+            Риск: { max: 8 }
+          },
+          main_criterion: "Прибыль",
+          variable_bounds: [[0, 10], [0, 10], [0, 10]]
+        }
+      };
+    }
+    return {
+      run_id: runId,
+      algorithm_id: "ahp",
+      input: {
+        criteria: ["Цена", "Качество", "Срок"],
+        alternatives: ["A", "B", "C"],
+        matrix: [
+          [1, 3, 5],
+          [1/3, 1, 2],
+          [1/5, 1/2, 1]
+        ],
+        alt_matrices: {
+          "Цена": [
+            [1, 1/2, 2],
+            [2, 1, 3],
+            [1/2, 1/3, 1]
+          ],
+          "Качество": [
+            [1, 4, 6],
+            [1/4, 1, 2],
+            [1/6, 1/2, 1]
+          ],
+          "Срок": [
+            [1, 2, 4],
+            [1/2, 1, 3],
+            [1/4, 1/3, 1]
+          ]
+        }
+      }
+    };
+  }
+  const res = await fetch(`${API_BASE}/api/runs/${runId}`);
+  if (!res.ok) throw new Error("Ошибка загрузки данных расчёта");
+  return await res.json();
+}
+
 async function fetchReportsList(page = 1, limit = 50) {
   if (APP_MODE === "demo") {
     const res = await fetch("mocks/reports_list.json");

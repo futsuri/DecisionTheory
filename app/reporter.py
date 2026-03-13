@@ -65,6 +65,9 @@ def build_report(run_id, algorithm_id, payload, result):
 
 def _report_ahp(run_id, payload, result):
     criteria = payload.get("criteria", [])
+    alternatives = payload.get("alternatives", [])
+    matrix = payload.get("matrix", [])
+    alt_matrices = payload.get("alt_matrices", {})
     weights = result.get("weights", [])
     ranking = result.get("ranking", [])
     consistency = result.get("consistency", {})
@@ -100,6 +103,77 @@ def _report_ahp(run_id, payload, result):
     if suggestions:
         markdown.append("")
         markdown.append("> " + " ".join(suggestions))
+
+    intermediate = _build_ahp_intermediate(criteria, alternatives, matrix, alt_matrices)
+    if intermediate:
+        markdown.append("")
+        markdown.append("## Промежуточные таблицы")
+        markdown.append("Комментарий: нормализация выполняется по столбцам, веса — среднее значение по строке.")
+
+        if intermediate.get("criteria_matrix"):
+            markdown.extend(_render_matrix_section(
+                "Матрица сравнения критериев",
+                criteria,
+                criteria,
+                intermediate["criteria_matrix"],
+            ))
+
+        if intermediate.get("criteria_norm"):
+            markdown.extend(_render_matrix_section(
+                "Нормализованная матрица критериев",
+                criteria,
+                criteria,
+                intermediate["criteria_norm"],
+            ))
+
+        if intermediate.get("criteria_weights"):
+            markdown.extend(_render_weights_section(
+                "Веса критериев (по нормализованной матрице)",
+                criteria,
+                intermediate["criteria_weights"],
+            ))
+
+        for crit_name in criteria:
+            alt_matrix = intermediate.get("alt_matrices", {}).get(crit_name)
+            if alt_matrix:
+                markdown.extend(_render_matrix_section(
+                    f"Матрица сравнений альтернатив по критерию «{crit_name}»",
+                    alternatives,
+                    alternatives,
+                    alt_matrix,
+                ))
+            alt_norm = intermediate.get("alt_norm", {}).get(crit_name)
+            if alt_norm:
+                markdown.extend(_render_matrix_section(
+                    f"Нормализованная матрица альтернатив по критерию «{crit_name}»",
+                    alternatives,
+                    alternatives,
+                    alt_norm,
+                ))
+            alt_weights = intermediate.get("alt_weights", {}).get(crit_name)
+            if alt_weights:
+                markdown.extend(_render_weights_section(
+                    f"Веса альтернатив по критерию «{crit_name}»",
+                    alternatives,
+                    alt_weights,
+                ))
+
+        synthesis = intermediate.get("synthesis_matrix")
+        if synthesis:
+            markdown.extend(_render_matrix_section(
+                "Матрица синтеза (веса альтернатив по критериям)",
+                alternatives,
+                criteria,
+                synthesis,
+            ))
+
+        final_scores = intermediate.get("final_scores")
+        if final_scores:
+            markdown.extend(_render_weights_section(
+                "Итоговые приоритеты альтернатив",
+                alternatives,
+                final_scores,
+            ))
 
     chart_markdown = _build_ahp_charts(criteria, weights, ranking)
     markdown.extend(["", chart_markdown])
@@ -200,12 +274,13 @@ def _build_multi_criteria_charts(optimum, is_feasible):
     names = list(optimum.keys())
     values = list(optimum.values())
 
-    fig, ax = plt.subplots(figsize=(6, 3))
+    fig, ax = plt.subplots(figsize=(_chart_width(len(names), base=6.0, max_width=12.0, per_label=0.4), 3))
     colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"]
     bar_colors = [colors[i % len(colors)] for i in range(len(names))]
     ax.bar(names, values, color=bar_colors)
     ax.set_title("Значения критериев в оптимальной точке")
     ax.set_ylabel("Значение")
+    _style_category_axis(ax, names)
     fig.tight_layout()
     b64 = _fig_to_base64(fig)
     plt.close(fig)
@@ -392,11 +467,12 @@ def _write_report_pdf(path, algorithm_id, payload, result):
             ranking = result.get("ranking", [])
 
             if criteria and weights:
-                fig_weights, ax_weights = plt.subplots(figsize=(8.27, 4.5))
+                fig_weights, ax_weights = plt.subplots(figsize=(_chart_width(len(criteria), base=8.27, max_width=9.5, per_label=0.32), 4.5))
                 ax_weights.bar(criteria, weights, color="#3b82f6")
                 ax_weights.set_title("Веса критериев")
                 ax_weights.set_ylabel("Вес")
                 ax_weights.set_ylim(0, max(weights) * 1.2 if weights else 1)
+                _style_category_axis(ax_weights, criteria)
                 fig_weights.tight_layout()
                 pdf.savefig(fig_weights, bbox_inches="tight")
                 plt.close(fig_weights)
@@ -404,11 +480,12 @@ def _write_report_pdf(path, algorithm_id, payload, result):
             if ranking:
                 names = [r.get("alternative") for r in ranking]
                 scores = [r.get("score") for r in ranking]
-                fig_rank, ax_rank = plt.subplots(figsize=(8.27, 4.5))
+                fig_rank, ax_rank = plt.subplots(figsize=(_chart_width(len(names), base=8.27, max_width=9.5, per_label=0.32), 4.5))
                 ax_rank.bar(names, scores, color="#10b981")
                 ax_rank.set_title("Рейтинг альтернатив")
                 ax_rank.set_ylabel("Приоритет")
                 ax_rank.set_ylim(0, max(scores) * 1.2 if scores else 1)
+                _style_category_axis(ax_rank, names)
                 fig_rank.tight_layout()
                 pdf.savefig(fig_rank, bbox_inches="tight")
                 plt.close(fig_rank)
@@ -421,26 +498,50 @@ def _write_report_pdf(path, algorithm_id, payload, result):
                 values_mc = list(optimum.values())
                 colors_mc = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"]
                 bar_colors_mc = [colors_mc[i % len(colors_mc)] for i in range(len(names_mc))]
-                fig_mc, ax_mc = plt.subplots(figsize=(8.27, 4.5))
+                fig_mc, ax_mc = plt.subplots(
+                    figsize=(_chart_width(len(names_mc), base=8.27, max_width=9.5, per_label=0.32), 4.5)
+                )
                 ax_mc.bar(names_mc, values_mc, color=bar_colors_mc)
                 ax_mc.set_title("Значения критериев в оптимальной точке")
                 ax_mc.set_ylabel("Значение")
+                _style_category_axis(ax_mc, names_mc)
                 fig_mc.tight_layout()
                 pdf.savefig(fig_mc, bbox_inches="tight")
                 plt.close(fig_mc)
 
 
+def _build_multi_criteria_charts(optimum, is_feasible):
+    """Строит столбчатую диаграмму значений критериев в оптимальной точке."""
+    if not optimum or not is_feasible:
+        return ""
+
+    names = list(optimum.keys())
+    values = list(optimum.values())
+
+    fig, ax = plt.subplots(figsize=(_chart_width(len(names), base=6.0, max_width=12.0, per_label=0.4), 3))
+    colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"]
+    bar_colors = [colors[i % len(colors)] for i in range(len(names))]
+    ax.bar(names, values, color=bar_colors)
+    ax.set_title("Значения критериев в оптимальной точке")
+    ax.set_ylabel("Значение")
+    _style_category_axis(ax, names)
+    fig.tight_layout()
+    b64 = _fig_to_base64(fig)
+    plt.close(fig)
+
+    return f"![Значения критериев](data:image/png;base64,{b64})"
 
 
 def _build_ahp_charts(criteria, weights, ranking):
     if not criteria or not weights:
         return ""
 
-    fig, ax = plt.subplots(figsize=(6, 3))
+    fig, ax = plt.subplots(figsize=(_chart_width(len(criteria), base=6.0, max_width=12.0, per_label=0.4), 3))
     ax.bar(criteria, weights, color="#3b82f6")
     ax.set_title("Веса критериев")
     ax.set_ylabel("Вес")
     ax.set_ylim(0, max(weights) * 1.2 if weights else 1)
+    _style_category_axis(ax, criteria)
     fig.tight_layout()
     weights_b64 = _fig_to_base64(fig)
     plt.close(fig)
@@ -448,11 +549,12 @@ def _build_ahp_charts(criteria, weights, ranking):
     if ranking:
         names = [r.get("alternative") for r in ranking]
         scores = [r.get("score") for r in ranking]
-        fig2, ax2 = plt.subplots(figsize=(6, 3))
+        fig2, ax2 = plt.subplots(figsize=(_chart_width(len(names), base=6.0, max_width=12.0, per_label=0.4), 3))
         ax2.bar(names, scores, color="#10b981")
         ax2.set_title("Рейтинг альтернатив")
         ax2.set_ylabel("Приоритет")
         ax2.set_ylim(0, max(scores) * 1.2 if scores else 1)
+        _style_category_axis(ax2, names)
         fig2.tight_layout()
         ranking_b64 = _fig_to_base64(fig2)
         plt.close(fig2)
@@ -465,6 +567,144 @@ def _build_ahp_charts(criteria, weights, ranking):
     return "\n\n".join(parts)
 
 
+def _render_matrix_section(title, row_labels, col_labels, matrix):
+    lines = ["", f"### {title}"]
+    lines.append(_build_md_matrix(row_labels, col_labels, matrix))
+    return lines
+
+
+def _render_weights_section(title, labels, weights):
+    rows = []
+    for name, value in zip(labels, weights):
+        rows.append([name, _fmt_float(value)])
+    table = _build_md_table(["Элемент", "Вес"], rows) if rows else ""
+    lines = ["", f"### {title}"]
+    if table:
+        lines.append(table)
+    return lines
+
+
+def _build_md_table(headers, rows):
+    header_line = "| " + " | ".join(headers) + " |"
+    divider_line = "| " + " | ".join(["---"] * len(headers)) + " |"
+    body_lines = ["| " + " | ".join(str(cell) for cell in row) + " |" for row in rows]
+    return "\n".join([header_line, divider_line] + body_lines)
+
+
+def _build_md_matrix(row_labels, col_labels, matrix):
+    safe_rows = matrix or []
+    headers = [""] + [str(label) for label in col_labels]
+    rows = []
+    for idx, row in enumerate(safe_rows):
+        label = row_labels[idx] if idx < len(row_labels) else str(idx + 1)
+        rows.append([label] + [_fmt_float(value) for value in row])
+    return _build_md_table(headers, rows)
+
+
+def _fmt_float(value, precision=4):
+    try:
+        return f"{float(value):.{precision}f}"
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def _build_ahp_intermediate(criteria, alternatives, matrix, alt_matrices):
+    if not criteria or not alternatives or not matrix:
+        return {}
+
+    criteria_norm = _normalize_matrix(matrix)
+    criteria_weights = _calculate_weights(criteria_norm)
+
+    alt_norm = {}
+    alt_weights = {}
+    for crit in criteria:
+        alt_matrix = alt_matrices.get(crit)
+        if not alt_matrix:
+            continue
+        norm = _normalize_matrix(alt_matrix)
+        alt_norm[crit] = norm
+        alt_weights[crit] = _calculate_weights(norm)
+
+    synthesis_matrix = []
+    if alt_weights:
+        for alt_idx in range(len(alternatives)):
+            row = []
+            for crit in criteria:
+                weights_for_crit = alt_weights.get(crit)
+                row.append(weights_for_crit[alt_idx] if weights_for_crit else 0.0)
+            synthesis_matrix.append(row)
+
+    final_scores = []
+    if synthesis_matrix:
+        for row in synthesis_matrix:
+            score = 0.0
+            for idx, value in enumerate(row):
+                if idx < len(criteria_weights):
+                    score += value * criteria_weights[idx]
+            final_scores.append(score)
+
+    return {
+        "criteria_matrix": matrix,
+        "criteria_norm": criteria_norm,
+        "criteria_weights": criteria_weights,
+        "alt_matrices": alt_matrices,
+        "alt_norm": alt_norm,
+        "alt_weights": alt_weights,
+        "synthesis_matrix": synthesis_matrix,
+        "final_scores": final_scores,
+    }
+
+
+def _normalize_matrix(matrix):
+    size = len(matrix)
+    column_sums = [0.0 for _ in range(size)]
+    for j in range(size):
+        for i in range(size):
+            column_sums[j] += matrix[i][j]
+
+    normalized = [[0.0 for _ in range(size)] for _ in range(size)]
+    for i in range(size):
+        for j in range(size):
+            normalized[i][j] = matrix[i][j] / column_sums[j] if column_sums[j] else 0.0
+    return normalized
+
+
+def _calculate_weights(normalized_matrix):
+    size = len(normalized_matrix)
+    weights = [0.0 for _ in range(size)]
+    for i in range(size):
+        row_sum = 0.0
+        for j in range(size):
+            row_sum += normalized_matrix[i][j]
+        weights[i] = row_sum / size if size else 0.0
+    return weights
+
+
+def _chart_width(label_count, base=6.0, max_width=12.0, per_label=0.4):
+    if not label_count:
+        return base
+    width = max(base, per_label * label_count)
+    return min(max_width, width)
+
+
+def _style_category_axis(ax, labels):
+    if not labels:
+        return
+    label_count = len(labels)
+    if label_count >= 12:
+        rotation = 60
+        size = 8
+    elif label_count >= 8:
+        rotation = 45
+        size = 9
+    else:
+        rotation = 0
+        size = 10
+    ax.tick_params(axis="x", labelsize=size)
+    for tick in ax.get_xticklabels():
+        tick.set_rotation(rotation)
+        tick.set_ha("right" if rotation else "center")
+    ax.margins(x=0.02)
 
 
 def _fig_to_base64(fig):

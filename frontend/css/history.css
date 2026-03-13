@@ -84,6 +84,15 @@
     background: #4b5563;
 }
 
+.reuse-btn {
+    background: #0ea5e9;
+    color: white;
+}
+
+.reuse-btn:hover {
+    background: #0284c7;
+}
+
 .empty-state {
     text-align: center;
     padding: 4rem 2rem;

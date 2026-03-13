@@ -15,7 +15,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Читаем выбранный метод из localStorage
-    const algorithmId = load("algorithm_id");
+    let algorithmId = load("algorithm_id");
+    const reusePayload = load("reuse_payload");
+
+    if (reusePayload && reusePayload.algorithm_id) {
+        algorithmId = reusePayload.algorithm_id;
+        save("algorithm_id", reusePayload.algorithm_id);
+    }
 
     if (!algorithmId) {
         titleEl.innerHTML = "Метод не выбран";
@@ -33,6 +39,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Генерируем форму
     renderInputForm(algorithmId, formContainer);
+
+    if (reusePayload && reusePayload.input) {
+        applyPrefill(algorithmId, reusePayload.input);
+        localStorage.removeItem("reuse_payload");
+    }
 
     // Кнопка отправки (если появилась в форме)
     const submitBtn = document.getElementById("submit-btn");
@@ -265,7 +276,11 @@ function renderInputForm(algId, container) {
                 return;
             }
 
+            const prevState = getAhpFormState();
             generateAHPStructure(critCount, altCount, inner);
+            if (prevState) {
+                applyAhpFormState(prevState);
+            }
             document.getElementById("submit-btn").style.display = "block";
         });
         const randomBtn = document.getElementById("random-ahp");
@@ -326,7 +341,11 @@ function renderInputForm(algId, container) {
                 return;
             }
 
+            const prevState = getMcFormState();
             renderMultiCriteriaForm(dim, crit);  // ← здесь вызывается функция
+            if (prevState) {
+                applyMcFormState(prevState);
+            }
             document.getElementById("submit-btn").style.display = "block";
         });
 
@@ -397,7 +416,7 @@ function generateAHPStructure(critCount, altCount, inner) {
                     type="text"
                     id="alt-${i-1}"
                     class="alt-name"
-                    value="Альтернатиива ${i}"
+                    value="Альтернатива ${i}"
                     placeholder="Введите название..."
                 >
             </div>
@@ -855,4 +874,356 @@ function randomizeMC() {
         checks[randomIndex].checked = true;
     }
 
+}
+
+function applyPrefill(algId, inputData) {
+    if (!inputData) {
+        return;
+    }
+    if (algId === "ahp") {
+        applyAhpPrefill(inputData);
+    } else if (algId === "multi_criteria") {
+        applyMultiCriteriaPrefill(inputData);
+    }
+}
+
+function fillMatrix(tableId, matrix) {
+    const table = document.getElementById(tableId);
+    if (!table || !Array.isArray(matrix)) {
+        return;
+    }
+    const rows = table.querySelectorAll("tbody tr");
+    rows.forEach((row, i) => {
+        const inputs = row.querySelectorAll("input");
+        inputs.forEach((input, j) => {
+            if (matrix[i] && matrix[i][j] !== undefined) {
+                input.value = matrix[i][j];
+            }
+        });
+    });
+}
+
+function applyAhpPrefill(inputData) {
+    const criteria = Array.isArray(inputData.criteria) ? inputData.criteria : [];
+    const alternatives = Array.isArray(inputData.alternatives) ? inputData.alternatives : [];
+    const matrix = Array.isArray(inputData.matrix) ? inputData.matrix : [];
+    const altMatrices = inputData.alt_matrices || {};
+
+    const critCount = Math.max(criteria.length, 2);
+    const altCount = Math.max(alternatives.length, 2);
+
+    const critCountInput = document.getElementById("crit-count");
+    const altCountInput = document.getElementById("alt-count");
+    if (critCountInput) critCountInput.value = critCount;
+    if (altCountInput) altCountInput.value = altCount;
+
+    const inner = document.querySelector(".form-inner");
+    if (!inner) {
+        return;
+    }
+
+    generateAHPStructure(critCount, altCount, inner);
+
+    document.querySelectorAll(".crit-name").forEach((input, idx) => {
+        if (criteria[idx]) {
+            input.value = criteria[idx];
+        }
+    });
+    document.querySelectorAll(".alt-name").forEach((input, idx) => {
+        if (alternatives[idx]) {
+            input.value = alternatives[idx];
+        }
+    });
+
+    renderPairwiseMatrix("criteria-matrix", critCount, "crit");
+    renderAlternativeMatrices("alt-matrices", critCount, altCount);
+
+    fillMatrix("criteria-matrix", matrix);
+
+    criteria.forEach((name, idx) => {
+        const altMatrix = altMatrices[name];
+        if (altMatrix) {
+            fillMatrix(`alt-matrix-${idx}`, altMatrix);
+        }
+    });
+
+    const submitBtn = document.getElementById("submit-btn");
+    if (submitBtn) {
+        submitBtn.style.display = "block";
+    }
+}
+
+function applyMultiCriteriaPrefill(inputData) {
+    const criteria = Array.isArray(inputData.criteria) ? inputData.criteria : [];
+    const constraints = inputData.constraints || {};
+    const mainCriterion = inputData.main_criterion || null;
+    const variableBounds = Array.isArray(inputData.variable_bounds) ? inputData.variable_bounds : [];
+
+    const coeffLengths = criteria.map(item => (item.params && item.params.coeffs ? item.params.coeffs.length : 0));
+    const dimCount = Math.max(variableBounds.length || 0, ...coeffLengths, 1);
+    const critCount = Math.max(criteria.length, 1);
+
+    const dimInput = document.getElementById("dim-count");
+    const critInput = document.getElementById("crit-count");
+    if (dimInput) dimInput.value = dimCount;
+    if (critInput) critInput.value = critCount;
+
+    renderMultiCriteriaForm(dimCount, critCount);
+
+    const nameInputs = document.querySelectorAll(".crit-name");
+    const funcSelects = document.querySelectorAll(".crit-func-type");
+    const directionSelects = document.querySelectorAll(".crit-direction");
+    const operatorSelects = document.querySelectorAll(".crit-operator");
+    const limitInputs = document.querySelectorAll(".crit-limit");
+    const mainChecks = document.querySelectorAll(".main-crit-check");
+
+    criteria.forEach((item, idx) => {
+        if (nameInputs[idx]) nameInputs[idx].value = item.name || nameInputs[idx].value;
+        if (funcSelects[idx] && item.func_type) funcSelects[idx].value = item.func_type;
+        if (directionSelects[idx] && item.direction) directionSelects[idx].value = item.direction;
+    });
+
+    directionSelects.forEach(select => {
+        select.dispatchEvent(new Event("change"));
+    });
+
+    criteria.forEach((item, idx) => {
+        const coeffs = item.params && Array.isArray(item.params.coeffs) ? item.params.coeffs : [];
+        coeffs.forEach((value, colIdx) => {
+            const input = document.querySelector(`.crit-coeff[data-row="${idx + 1}"][data-col="${colIdx + 1}"]`);
+            if (input) {
+                input.value = value;
+            }
+        });
+
+        if (mainChecks[idx] && item.name && item.name === mainCriterion) {
+            mainChecks[idx].checked = true;
+        }
+    });
+
+    const mainIndex = criteria.findIndex(item => item.name === mainCriterion);
+    if (mainIndex >= 0 && mainChecks[mainIndex]) {
+        mainChecks[mainIndex].dispatchEvent(new Event("change"));
+    }
+
+    criteria.forEach((item, idx) => {
+        if (item.name && item.name === mainCriterion) {
+            return;
+        }
+        const constraint = item.name ? constraints[item.name] : null;
+        if (!constraint) {
+            return;
+        }
+        if (operatorSelects[idx] && limitInputs[idx]) {
+            if (constraint.min !== undefined && constraint.min !== null) {
+                operatorSelects[idx].value = "≥";
+                limitInputs[idx].value = constraint.min;
+            } else if (constraint.max !== undefined && constraint.max !== null) {
+                operatorSelects[idx].value = "≤";
+                limitInputs[idx].value = constraint.max;
+            }
+        }
+    });
+
+    const varMinInputs = document.querySelectorAll(".var-min");
+    const varMaxInputs = document.querySelectorAll(".var-max");
+    variableBounds.forEach((bounds, idx) => {
+        if (varMinInputs[idx]) varMinInputs[idx].value = bounds[0];
+        if (varMaxInputs[idx]) varMaxInputs[idx].value = bounds[1];
+    });
+
+    const submitBtn = document.getElementById("submit-btn");
+    if (submitBtn) {
+        submitBtn.style.display = "block";
+    }
+}
+
+function getMcFormState() {
+    const nameInputs = document.querySelectorAll(".crit-name");
+    const funcSelects = document.querySelectorAll(".crit-func-type");
+    const directionSelects = document.querySelectorAll(".crit-direction");
+    const operatorSelects = document.querySelectorAll(".crit-operator");
+    const limitInputs = document.querySelectorAll(".crit-limit");
+    const mainChecks = document.querySelectorAll(".main-crit-check");
+    const coeffInputs = document.querySelectorAll(".crit-coeff");
+    const varMinInputs = document.querySelectorAll(".var-min");
+    const varMaxInputs = document.querySelectorAll(".var-max");
+
+    if (!nameInputs.length || !coeffInputs.length) {
+        return null;
+    }
+
+    const criteria = Array.from(nameInputs).map((input, idx) => {
+        const coeffs = [];
+        coeffInputs.forEach(inp => {
+            if (parseInt(inp.dataset.row) === idx + 1) {
+                coeffs.push(parseFloat(inp.value) || 0);
+            }
+        });
+
+        return {
+            name: input.value,
+            func_type: funcSelects[idx] ? funcSelects[idx].value : "linear",
+            direction: directionSelects[idx] ? directionSelects[idx].value : "max",
+            operator: operatorSelects[idx] ? operatorSelects[idx].value : "≥",
+            limit: limitInputs[idx] ? limitInputs[idx].value : "",
+            is_main: mainChecks[idx] ? mainChecks[idx].checked : false,
+            coeffs
+        };
+    });
+
+    const variable_bounds = [];
+    varMinInputs.forEach((input, idx) => {
+        const maxInput = varMaxInputs[idx];
+        variable_bounds.push([
+            parseFloat(input.value) || 0,
+            maxInput ? (parseFloat(maxInput.value) || 0) : 0
+        ]);
+    });
+
+    return {
+        dim_count: varMinInputs.length,
+        crit_count: criteria.length,
+        criteria,
+        variable_bounds
+    };
+}
+
+function applyMcFormState(state) {
+    if (!state || !state.criteria) {
+        return;
+    }
+
+    const nameInputs = document.querySelectorAll(".crit-name");
+    const funcSelects = document.querySelectorAll(".crit-func-type");
+    const directionSelects = document.querySelectorAll(".crit-direction");
+    const operatorSelects = document.querySelectorAll(".crit-operator");
+    const limitInputs = document.querySelectorAll(".crit-limit");
+    const mainChecks = document.querySelectorAll(".main-crit-check");
+
+    state.criteria.forEach((item, idx) => {
+        if (nameInputs[idx]) nameInputs[idx].value = item.name || nameInputs[idx].value;
+        if (funcSelects[idx] && item.func_type) funcSelects[idx].value = item.func_type;
+        if (directionSelects[idx] && item.direction) directionSelects[idx].value = item.direction;
+    });
+
+    directionSelects.forEach(select => {
+        select.dispatchEvent(new Event("change"));
+    });
+
+    state.criteria.forEach((item, idx) => {
+        const coeffs = Array.isArray(item.coeffs) ? item.coeffs : [];
+        coeffs.forEach((value, colIdx) => {
+            const input = document.querySelector(`.crit-coeff[data-row="${idx + 1}"][data-col="${colIdx + 1}"]`);
+            if (input) {
+                input.value = value;
+            }
+        });
+
+        if (mainChecks[idx]) {
+            mainChecks[idx].checked = Boolean(item.is_main);
+        }
+    });
+
+    const mainIndex = state.criteria.findIndex(item => item.is_main);
+    if (mainIndex >= 0 && mainChecks[mainIndex]) {
+        mainChecks[mainIndex].dispatchEvent(new Event("change"));
+    }
+
+    state.criteria.forEach((item, idx) => {
+        if (item.is_main) {
+            return;
+        }
+        if (operatorSelects[idx] && item.operator) {
+            operatorSelects[idx].value = item.operator;
+        }
+        if (limitInputs[idx] && item.limit !== undefined) {
+            limitInputs[idx].value = item.limit;
+        }
+    });
+
+    const varMinInputs = document.querySelectorAll(".var-min");
+    const varMaxInputs = document.querySelectorAll(".var-max");
+    (state.variable_bounds || []).forEach((bounds, idx) => {
+        if (varMinInputs[idx]) varMinInputs[idx].value = bounds[0];
+        if (varMaxInputs[idx]) varMaxInputs[idx].value = bounds[1];
+    });
+}
+
+function getAhpFormState() {
+    const critInputs = document.querySelectorAll(".crit-name");
+    const altInputs = document.querySelectorAll(".alt-name");
+    const critCount = critInputs.length;
+    const altCount = altInputs.length;
+
+    if (!critCount || !altCount) {
+        return null;
+    }
+
+    const criteria = Array.from(critInputs).map(input => input.value);
+    const alternatives = Array.from(altInputs).map(input => input.value);
+
+    const matrix = getMatrixSafe("criteria-matrix", critCount);
+    const alt_matrices = {};
+    for (let i = 0; i < critCount; i++) {
+        alt_matrices[criteria[i]] = getMatrixSafe(`alt-matrix-${i}`, altCount);
+    }
+
+    return { criteria, alternatives, matrix, alt_matrices };
+}
+
+function applyAhpFormState(state) {
+    if (!state) {
+        return;
+    }
+    const criteria = Array.isArray(state.criteria) ? state.criteria : [];
+    const alternatives = Array.isArray(state.alternatives) ? state.alternatives : [];
+    const matrix = Array.isArray(state.matrix) ? state.matrix : [];
+    const altMatrices = state.alt_matrices || {};
+
+    document.querySelectorAll(".crit-name").forEach((input, idx) => {
+        if (criteria[idx] !== undefined) {
+            input.value = criteria[idx];
+        }
+    });
+    document.querySelectorAll(".alt-name").forEach((input, idx) => {
+        if (alternatives[idx] !== undefined) {
+            input.value = alternatives[idx];
+        }
+    });
+
+    fillMatrix("criteria-matrix", matrix);
+
+    document.querySelectorAll(".crit-name").forEach((input, idx) => {
+        const critName = input.value || criteria[idx];
+        const altMatrix = altMatrices[critName] || altMatrices[criteria[idx]];
+        if (altMatrix) {
+            fillMatrix(`alt-matrix-${idx}`, altMatrix);
+        }
+    });
+}
+
+function getMatrixSafe(tableId, size) {
+    const table = document.getElementById(tableId);
+    if (!table) {
+        return [];
+    }
+
+    const matrix = [];
+    const rows = table.querySelectorAll("tbody tr");
+
+    rows.forEach((row, i) => {
+        if (i >= size) {
+            return;
+        }
+        matrix[i] = [];
+        const inputs = row.querySelectorAll("input");
+        inputs.forEach((input, j) => {
+            if (j < size) {
+                matrix[i][j] = parseFloat(input.value) || 1;
+            }
+        });
+    });
+
+    return matrix;
 }

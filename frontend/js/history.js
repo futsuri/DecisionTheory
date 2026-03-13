@@ -66,6 +66,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                         <button class="action-btn view-btn" data-run-id="${item.run_id}">
                             Открыть
                         </button>
+                        <button class="action-btn reuse-btn" data-run-id="${item.run_id}">
+                            Использовать
+                        </button>
                         <a href="/api/reports/${item.run_id}/csv" download class="action-btn csv-btn">
                             CSV
                         </a>
@@ -86,6 +89,28 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const runId = btn.dataset.runId;
                 save("run_id", runId);
                 window.location.href = "/report";
+            });
+        });
+
+        container.querySelectorAll(".reuse-btn").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const runId = btn.dataset.runId;
+                btn.disabled = true;
+                btn.textContent = "Загрузка...";
+                try {
+                    const runData = await fetchRun(runId);
+                    save("algorithm_id", runData.algorithm_id);
+                    save("reuse_payload", {
+                        run_id: runData.run_id,
+                        algorithm_id: runData.algorithm_id,
+                        input: runData.input
+                    });
+                    window.location.href = "/input";
+                } catch (err) {
+                    showError("history-container", "Ошибка загрузки расчёта: " + err.message);
+                    btn.disabled = false;
+                    btn.textContent = "Использовать";
+                }
             });
         });
 
