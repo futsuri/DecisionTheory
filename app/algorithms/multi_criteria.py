@@ -112,45 +112,37 @@ class MultiCriteriaModel:
         coeffs = params.get("coeffs", [])
         
         if func_type == "linear":
-            # f(x) = c0 + c1*x1 + c2*x2 + ...
-            result = coeffs[0] if len(coeffs) > 0 else 0.0
+            # f(x) = a1*x1 + a2*x2 + ...
+            result = 0.0
             for i, xi in enumerate(x):
-                if i + 1 < len(coeffs):
-                    result += coeffs[i + 1] * xi
+                if i < len(coeffs):
+                    result += coeffs[i] * xi
             return result
         
         elif func_type == "quadratic":
-            # f(x) = c0 + c1*x1 + ... + c11*x1² + c12*x1*x2 + ...
-            result = coeffs[0] if len(coeffs) > 0 else 0.0
-            n = len(x)
-            idx = 1
-            for i in range(n):
-                if idx < len(coeffs):
-                    result += coeffs[idx] * x[i]
-                    idx += 1
-            for i in range(n):
-                for j in range(i, n):
-                    if idx < len(coeffs):
-                        result += coeffs[idx] * x[i] * x[j]
-                        idx += 1
+            # f(x) = a1*x1^2 + a2*x2^2 + ...
+            result = 0.0
+            for i, xi in enumerate(x):
+                if i < len(coeffs):
+                    result += coeffs[i] * (xi ** 2)
             return result
         
         elif func_type == "exponential":
-            # f(x) = c0 + c1*exp(x1) + c2*exp(x2) + ...
-            result = coeffs[0] if len(coeffs) > 0 else 0.0
+            # f(x) = a1*exp(x1) + a2*exp(x2) + ...
+            result = 0.0
             for i, xi in enumerate(x):
-                if i + 1 < len(coeffs):
-                    result += coeffs[i + 1] * math.exp(xi)
+                if i < len(coeffs):
+                    result += coeffs[i] * math.exp(xi)
             return result
         
         elif func_type == "logarithmic":
-            # f(x) = c0 + c1*ln(x1) + c2*ln(x2) + ...
-            result = coeffs[0] if len(coeffs) > 0 else 0.0
+            # f(x) = a1*ln(x1) + a2*ln(x2) + ...
+            result = 0.0
             for i, xi in enumerate(x):
-                if i + 1 < len(coeffs):
+                if i < len(coeffs):
                     if xi <= 0:
                         raise ValueError(f"Логарифмическая функция требует x[{i}] > 0")
-                    result += coeffs[i + 1] * math.log(xi)
+                    result += coeffs[i] * math.log(xi)
             return result
         
         else:
@@ -319,13 +311,13 @@ def run_demo():
             "name": "Прибыль",
             "func_type": "linear",
             "direction": "max",
-            "params": {"coeffs": [0, 50, 40]}  # 50*x1 + 40*x2
+            "params": {"coeffs": [50, 40]}  # 50*x1 + 40*x2
         },
         {
             "name": "Экология",
             "func_type": "linear",
             "direction": "min",
-            "params": {"coeffs": [0, 2, 3]}  # 2*x1 + 3*x2
+            "params": {"coeffs": [2, 3]}  # 2*x1 + 3*x2
         }
     ],
     "constraints": {

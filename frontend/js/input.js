@@ -336,7 +336,7 @@ function renderInputForm(algId, container) {
             const dim = parseInt(document.getElementById("dim-count").value);
             const crit = parseInt(document.getElementById("crit-count").value);
 
-            if (dim < 1 || dim > 10 || crit < 2 || crit > 8) {
+            if (dim < 1 || dim > 5 || crit < 2 || crit > 3) {
                 alert("Переменные 1–5, критерии 2–3");
                 return;
             }
@@ -416,7 +416,7 @@ function generateAHPStructure(critCount, altCount, inner) {
                     type="text"
                     id="alt-${i-1}"
                     class="alt-name"
-                    value="Альтернатива ${i}"
+                    value="Альтернатиива ${i}"
                     placeholder="Введите название..."
                 >
             </div>
@@ -560,7 +560,7 @@ function collectFormData(algId) {
     return payload;
 }
 
-// Вспомогательная функция — вытаскивает матрицу из конкретной таблицы
+// Вспомогательная функция — вытаскиет матрицу из конкретной таблицы
 function getMatrix(tableId) {
 
     const matrix = [];

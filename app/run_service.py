@@ -208,7 +208,7 @@ def _normalize_multi_criteria_input(input_data):
             nc["func_type"] = "linear"
         normalized_criteria.append(nc)
 
-    # Привести constraints к нормальному виду
+    # Привести constraints к нормальному виде
     normalized_constraints = {}
     for name, value in constraints.items():
         if isinstance(value, dict):
@@ -398,12 +398,27 @@ def _validate_multi_criteria_deep(payload):
             raise ValueError(f"MultiCriteria: дублирующееся имя критерия '{name}'")
         crit_names.add(name)
 
+        func_type = c.get("func_type")
+        if func_type == "logarithmic":
+            for j, b in enumerate(variable_bounds):
+                lb, _ = b
+                if lb <= 0:
+                    raise ValueError(
+                        f"MultiCriteria: criteria[{i}] ('{name}') — логарифмическая функция требует "
+                        f"min переменной x{j + 1} > 0"
+                    )
+
         # Проверка coeffs
         params = c.get("params", {})
         coeffs = params.get("coeffs", [])
         if not isinstance(coeffs, list) or len(coeffs) == 0:
             raise ValueError(
                 f"MultiCriteria: criteria[{i}] ('{name}') — 'params.coeffs' должен быть непустым списком"
+            )
+        if len(coeffs) != dim:
+            raise ValueError(
+                f"MultiCriteria: criteria[{i}] ('{name}') — число коэффициентов ({len(coeffs)}) "
+                f"должно совпадать с размерностью ({dim})"
             )
         for j, v in enumerate(coeffs):
             try:
