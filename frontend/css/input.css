@@ -473,3 +473,29 @@ h5.section-title {
     outline: none;
     box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
 }
+
+.criterion-item {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 1.2rem;
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.criterion-item:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 12px rgba(37,99,235,0.08);
+}
+
+.criterion-item input[type="checkbox"] {
+    margin-right: 10px;
+    transform: scale(1.2);
+}
+
+.criterion-item strong {
+    color: var(--color-primary-darker);
+    margin-bottom: 6px;
+}

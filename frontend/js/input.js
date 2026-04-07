@@ -371,69 +371,136 @@ function renderInputForm(algId, container) {
             });
 
         }
-        } else if (algId === "pair_games") {
-        inner.innerHTML = `
-            ${buildMethodHeaderHtml("Парные игры")}
+                } else if (algId === "pair_games") {
+            inner.innerHTML = `
+                ${buildMethodHeaderHtml("Парные игры")}
 
-            <div class="setup-block setup-centered" style="margin:2rem 0;">
-                <div class="setup-row">
-                    <label>Количество стратегий Игрока 1:</label>
-                    <input type="number" id="player1-strategies" min="2" max="12" value="4" style="width:80px;">
+                <div class="setup-block setup-centered" style="margin:2rem 0;">
+                    <div class="setup-row">
+                        <label>Количество стратегий Игрока 1:</label>
+                        <input type="number" id="player1-strategies" min="2" max="12" value="4" style="width:80px;">
 
-                    <label style="margin-left:2rem;">Количество стратегий Игрока 2:</label>
-                    <input type="number" id="player2-strategies" min="2" max="12" value="4" style="width:80px;">
+                        <label style="margin-left:2rem;">Количество стратегий Игрока 2:</label>
+                        <input type="number" id="player2-strategies" min="2" max="12" value="4" style="width:80px;">
+                    </div>
+                    <div class="setup-buttons">
+                        <button id="generate-pair-matrix" class="primary-btn">Создать матрицу</button>
+                        <button id="random-pair-game" class="secondary-btn">Случайно заполнить</button>
+                        <button id="load-example-pair" class="secondary-btn">Загрузить пример</button>
+                    </div>
                 </div>
-                <div class="setup-buttons">
-                    <button id="generate-pair-matrix" class="primary-btn">Создать матрицу</button>
-                    <button id="random-pair-game" class="secondary-btn">Случайно заполнить</button>
+
+                <div id="players-names-section" style="margin:2.5rem 0;"></div>
+                <div id="pair-matrix-section" style="margin:2rem 0;"></div>
+
+                <button id="submit-btn" class="primary-btn" style="display:none; margin-top:2rem; width:100%;">
+                    Найти оптимальные стратегии и цену игры
+                </button>
+            `;
+
+            // Обработчики
+            document.getElementById("generate-pair-matrix").addEventListener("click", () => {
+                const p1 = parseInt(document.getElementById("player1-strategies").value);
+                const p2 = parseInt(document.getElementById("player2-strategies").value);
+                if (p1 < 2 || p1 > 12 || p2 < 2 || p2 > 12) {
+                    alert("Количество стратегий должно быть от 2 до 12");
+                    return;
+                }
+                generatePairGameStructure(p1, p2);
+                document.getElementById("submit-btn").style.display = "block";
+            });
+
+            document.getElementById("random-pair-game").addEventListener("click", () => {
+                const p1 = parseInt(document.getElementById("player1-strategies").value);
+                const p2 = parseInt(document.getElementById("player2-strategies").value);
+                generatePairGameStructure(p1, p2);
+                setTimeout(randomizePairGame, 80);
+                document.getElementById("submit-btn").style.display = "block";
+            });
+
+            document.getElementById("load-example-pair").addEventListener("click", () => {
+                loadExample("pair_games");
+            });
+
+                } else if (algId === "nature_games") {
+            inner.innerHTML = `
+                ${buildMethodHeaderHtml("Игры с природой")}
+
+                <div class="setup-block setup-centered" style="margin:2rem 0;">
+                    <div class="setup-row">
+                        <label>Количество стратегий Игрока:</label>
+                        <input type="number" id="nature-strategies" min="2" max="12" value="4" style="width:80px;">
+
+                        <label style="margin-left:2rem;">Количество состояний природы:</label>
+                        <input type="number" id="nature-states" min="2" max="12" value="4" style="width:80px;">
+                    </div>
+                    <div class="setup-buttons">
+                        <button id="generate-nature-matrix" class="primary-btn">Создать матрицу</button>
+                        <button id="random-nature-game" class="secondary-btn">Случайно заполнить</button>
+                        <button id="load-example-nature" class="secondary-btn">Загрузить пример</button>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Блок имён игроков -->
-            <div id="players-names-section" style="margin:2.5rem 0;"></div>
+                <!-- Блок выбора критериев -->
+                <div id="criteria-section" style="margin:2rem 0; padding:1.8rem; background:#f8fafc; border-radius:12px; display:none;">
+                    <h4 style="margin-bottom:1.5rem; color:var(--color-primary-darker);">Выберите критерии оптимальности</h4>
+                    <div class="criteria-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.2rem;">
+                        <label class="criterion-item">
+                            <input type="checkbox" id="wald" class="nature-criterion" value="wald" checked>
+                            <strong>Критерий Вальда</strong> (максимин)
+                        </label>
+                        <label class="criterion-item">
+                            <input type="checkbox" id="laplace" class="nature-criterion" value="laplace" checked>
+                            <strong>Критерий Лапласа</strong> (равновероятностный)
+                        </label>
+                        <label class="criterion-item">
+                            <input type="checkbox" id="hurwicz" class="nature-criterion" value="hurwicz" checked>
+                            <strong>Критерий Гурвица</strong>
+                            <div style="margin-top:8px;">
+                                Коэффициент α:
+                                <input type="number" id="hurwicz-alpha" value="0.5" min="0" max="1" step="0.1" style="width:65px;">
+                            </div>
+                        </label>
+                        <label class="criterion-item">
+                            <input type="checkbox" id="savage" class="nature-criterion" value="savage" checked>
+                            <strong>Критерий Сэвиджа</strong> (минимакс сожаления)
+                        </label>
+                    </div>
+                </div>
 
-            <!-- Блок имён стратегий и матрица -->
-            <div id="pair-matrix-section" style="margin:2rem 0;"></div>
+                <div id="nature-players-section" style="margin:2.5rem 0;"></div>
+                <div id="nature-matrix-section" style="margin:2rem 0;"></div>
 
-            <button id="submit-btn" class="primary-btn" style="display:none; margin-top:2rem; width:100%;">
-                Найти оптимальные стратегии и цену игры
-            </button>
-        `;
+                <button id="submit-btn" class="primary-btn" style="display:none; margin-top:2rem; width:100%;">
+                    Рассчитать по выбранным критериям
+                </button>
+            `;
 
-        document.getElementById("generate-pair-matrix").addEventListener("click", () => {
-            const p1 = parseInt(document.getElementById("player1-strategies").value);
-            const p2 = parseInt(document.getElementById("player2-strategies").value);
+            document.getElementById("generate-nature-matrix").addEventListener("click", () => {
+                const strategies = parseInt(document.getElementById("nature-strategies").value);
+                const states = parseInt(document.getElementById("nature-states").value);
+                if (strategies < 2 || strategies > 12 || states < 2 || states > 12) {
+                    alert("Количество должно быть от 2 до 12");
+                    return;
+                }
+                generateNatureGameStructure(strategies, states);
+                document.getElementById("criteria-section").style.display = "block";
+                document.getElementById("submit-btn").style.display = "block";
+            });
 
-            if (p1 < 2 || p1 > 12 || p2 < 2 || p2 > 12) {
-                alert("Количество стратегий должно быть от 2 до 12");
-                return;
-            }
+            document.getElementById("random-nature-game").addEventListener("click", () => {
+                const strategies = parseInt(document.getElementById("nature-strategies").value);
+                const states = parseInt(document.getElementById("nature-states").value);
+                generateNatureGameStructure(strategies, states);
+                setTimeout(randomizeNatureGame, 80);
+                document.getElementById("criteria-section").style.display = "block";
+                document.getElementById("submit-btn").style.display = "block";
+            });
 
-            generatePairGameStructure(p1, p2);
-            document.getElementById("submit-btn").style.display = "block";
-        });
-
-        document.getElementById("random-pair-game").addEventListener("click", () => {
-            const p1 = parseInt(document.getElementById("player1-strategies").value);
-            const p2 = parseInt(document.getElementById("player2-strategies").value);
-            generatePairGameStructure(p1, p2);
-            setTimeout(randomizePairGame, 80);
-            document.getElementById("submit-btn").style.display = "block";
-        });
-    } else if (algId === "nature_games") {
-        inner.innerHTML = `
-            ${buildMethodHeaderHtml("Игры с природой")}
-
-            <div style="text-align:center; padding:4rem 2rem; color:#64748b;">
-                <p>Форма для «Игр с природой» пока в разработке.</p>
-                <p>Здесь будет ввод матрицы «решения × состояния природы» + выбор критериев оптимальности.</p>
-            </div>
-
-            <button id="submit-btn" class="primary-btn" style="display:block; margin:2rem auto;">
-                Запустить расчёт (заглушка)
-            </button>
-        `;
-    }
+            document.getElementById("load-example-nature").addEventListener("click", () => {
+                loadExample("nature_games");
+            });
+        }
 }
 
 // ====================== Генерация всей структуры AHP ======================
@@ -538,6 +605,35 @@ function collectFormData(algId) {
             input: {
                 payoff_matrix: matrix,
                 description: "Матричная игра двух лиц с нулевой суммой"
+            }
+        };
+    }
+    if (algId === "nature_games") {
+        const matrix = [];
+        const rows = document.querySelectorAll("#nature-game-matrix tbody tr");
+
+        rows.forEach(row => {
+            const rowData = [];
+            row.querySelectorAll(".pair-cell").forEach(cell => {
+                rowData.push(parseFloat(cell.value) || 0);
+            });
+            matrix.push(rowData);
+        });
+
+        const selectedCriteria = [];
+        document.querySelectorAll('.nature-criterion:checked').forEach(chk => {
+            selectedCriteria.push(chk.value);
+        });
+
+        const hurwiczAlpha = parseFloat(document.getElementById("hurwicz-alpha")?.value) || 0.5;
+
+        return {
+            algorithm_id: algId,
+            input: {
+                payoff_matrix: matrix,
+                decision_maker: document.getElementById("decision-maker")?.value || "ЛПР",
+                criteria: selectedCriteria,
+                hurwicz_alpha: hurwiczAlpha
             }
         };
     }
@@ -1486,4 +1582,113 @@ function getCurrentPairMatrix() {
     });
 
     return matrix;
+}
+
+// ====================== ИГРЫ С ПРИРОДОЙ ======================
+
+function generateNatureGameStructure(rows, cols) {
+    const playersSection = document.getElementById("nature-players-section");
+    const matrixSection = document.getElementById("nature-matrix-section");
+
+    // Сохраняем старые данные при изменении размера
+    const oldMatrix = getCurrentNatureMatrix();
+
+    playersSection.innerHTML = `
+        <div style="margin-bottom: 2rem;">
+            <h4 style="margin-bottom: 1rem; text-align: center; color: var(--color-primary-darker);">Лицо, принимающее решение</h4>
+            <div class="name-card" style="max-width: 400px; margin: 0 auto;">
+                <label for="decision-maker">Название ЛПР (опционально)</label>
+                <input type="text" id="decision-maker" class="player-name" value="Лицо, принимающее решение" style="width:100%;">
+            </div>
+        </div>
+    `;
+
+    let html = `
+        <h4 style="text-align:center; margin:1.5rem 0 1rem; color:var(--color-primary-darker);" id="nature-matrix-title">
+            Матрица "Стратегии × Состояния природы"
+        </h4>
+        <div class="table-wrapper">
+            <table class="pair-game-table" id="nature-game-matrix">
+                <thead>
+                    <tr>
+                        <th></th>`;
+
+    for (let j = 0; j < cols; j++) {
+        html += `<th class="col-header" data-col="${j}">S${j+1}</th>`;
+    }
+    html += `</tr></thead><tbody>`;
+
+    for (let i = 0; i < rows; i++) {
+        html += `<tr><th class="row-header" data-row="${i}">X${i+1}</th>`;
+        for (let j = 0; j < cols; j++) {
+            const oldValue = (oldMatrix[i] && oldMatrix[i][j] !== undefined)
+                           ? oldMatrix[i][j]
+                           : (Math.random() * 10 - 2).toFixed(1);
+
+            html += `
+                <td>
+                    <input type="number"
+                           class="pair-cell"
+                           data-row="${i}"
+                           data-col="${j}"
+                           value="${oldValue}"
+                           step="0.1">
+                </td>`;
+        }
+        html += `</tr>`;
+    }
+
+    html += `</tbody></table></div>`;
+
+    matrixSection.innerHTML = html;
+
+    setupNatureNameListeners();
+}
+
+function getCurrentNatureMatrix() {
+    const table = document.getElementById("nature-game-matrix");
+    if (!table) return [];
+
+    const matrix = [];
+    const rows = table.querySelectorAll("tbody tr");
+
+    rows.forEach(row => {
+        const rowData = [];
+        row.querySelectorAll(".pair-cell").forEach(cell => {
+            rowData.push(parseFloat(cell.value) || 0);
+        });
+        matrix.push(rowData);
+    });
+
+    return matrix;
+}
+
+function setupNatureNameListeners() {
+    // Можно расширить позже для названий стратегий и состояний природы
+    const titleEl = document.getElementById("nature-matrix-title");
+    if (titleEl) {
+        titleEl.textContent = `Матрица "Стратегии × Состояния природы"`;
+    }
+}
+
+function randomizeNatureGame() {
+    document.querySelectorAll("#nature-game-matrix .pair-cell").forEach(cell => {
+        cell.value = (Math.random() * 12 - 3).toFixed(1);
+    });
+
+    const dm = document.getElementById("decision-maker");
+    if (dm) dm.value = ["Руководитель", "Компания", "Фермер", "Инвестор"][Math.floor(Math.random()*4)];
+}
+
+// ====================== ЗАГРУЗКА ПРИМЕРА ======================
+
+function loadExample(algorithmId) {
+    if (algorithmId === "pair_games") {
+        alert("✅ Пример для «Парных игр» будет добавлен в ближайшее время.\n\nПока вы можете использовать кнопку «Случайно заполнить».");
+        // Здесь позже будет код загрузки реального примера
+    }
+    else if (algorithmId === "nature_games") {
+        alert("✅ Пример для «Игр с природой» будет добавлен в ближайшее время.\n\nПока вы можете использовать кнопку «Случайно заполнить».");
+        // Здесь позже будет код загрузки реального примера
+    }
 }
