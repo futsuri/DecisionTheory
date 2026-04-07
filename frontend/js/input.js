@@ -75,7 +75,9 @@ document.addEventListener("DOMContentLoaded", () => {
 function getMethodNameById(id) {
     const map = {
         ahp: "Метод анализа иерархий (AHP)",
-        multi_criteria: "Многокритериальная оптимизация"
+        multi_criteria: "Многокритериальная оптимизация",
+        pair_games: "Парные игры (матричные игры)",
+        nature_games: "Игры с природой"
     };
     return map[id] || `Метод ${id}`;
 }
@@ -369,6 +371,65 @@ function renderInputForm(algId, container) {
             });
 
         }
+    } else if (algId === "pair_games") {
+        inner.innerHTML = `
+            ${buildMethodHeaderHtml("Парные игры")}
+
+            <div class="setup-block setup-centered" style="margin:2rem 0;">
+                <div class="setup-row">
+                    <label>Количество стратегий Игрока 1 (ряды):</label>
+                    <input type="number" id="player1-strategies" min="2" max="10" value="3" style="width:80px;">
+
+                    <label style="margin-left:2rem;">Количество стратегий Игрока 2 (столбцы):</label>
+                    <input type="number" id="player2-strategies" min="2" max="10" value="3" style="width:80px;">
+                </div>
+                <div class="setup-buttons">
+                    <button id="generate-pair-matrix" class="primary-btn">Создать платежную матрицу</button>
+                    <button id="random-pair-game" class="secondary-btn">Случайно заполнить</button>
+                </div>
+            </div>
+
+            <div id="pair-matrix-section" style="margin:2.5rem 0;"></div>
+
+            <button id="submit-btn" class="primary-btn" style="display:none; margin-top:2rem; width:100%;">
+                Найти оптимальные стратегии
+            </button>
+        `;
+
+        // Обработчики
+        document.getElementById("generate-pair-matrix").addEventListener("click", () => {
+            const rows = parseInt(document.getElementById("player1-strategies").value);
+            const cols = parseInt(document.getElementById("player2-strategies").value);
+
+            if (rows < 2 || rows > 10 || cols < 2 || cols > 10) {
+                alert("Количество стратегий должно быть от 2 до 10");
+                return;
+            }
+
+            renderPairGameMatrix(rows, cols);
+            document.getElementById("submit-btn").style.display = "block";
+        });
+
+        document.getElementById("random-pair-game").addEventListener("click", () => {
+            const rows = parseInt(document.getElementById("player1-strategies").value);
+            const cols = parseInt(document.getElementById("player2-strategies").value);
+            renderPairGameMatrix(rows, cols);
+            setTimeout(() => randomizePairGameMatrix(), 30);
+            document.getElementById("submit-btn").style.display = "block";
+        });
+    } else if (algId === "nature_games") {
+        inner.innerHTML = `
+            ${buildMethodHeaderHtml("Игры с природой")}
+
+            <div style="text-align:center; padding:4rem 2rem; color:#64748b;">
+                <p>Форма для «Игр с природой» пока в разработке.</p>
+                <p>Здесь будет ввод матрицы «решения × состояния природы» + выбор критериев оптимальности.</p>
+            </div>
+
+            <button id="submit-btn" class="primary-btn" style="display:block; margin:2rem auto;">
+                Запустить расчёт (заглушка)
+            </button>
+        `;
     }
 }
 
@@ -457,6 +518,26 @@ function generateAHPStructure(critCount, altCount, inner) {
 
 // Обновлённая функция сбора данных для AHP
 function collectFormData(algId) {
+    if (algId === "pair_games") {
+        const matrix = [];
+        const rows = document.querySelectorAll("#pair-game-matrix tbody tr");
+
+        rows.forEach(row => {
+            const rowData = [];
+            row.querySelectorAll(".pair-cell").forEach(cell => {
+                rowData.push(parseFloat(cell.value) || 0);
+            });
+            matrix.push(rowData);
+        });
+
+        return {
+            algorithm_id: algId,
+            input: {
+                payoff_matrix: matrix,
+                description: "Матричная игра двух лиц с нулевой суммой"
+            }
+        };
+    }
     if (algId === "multi_criteria") {
         const dimCount = parseInt(document.getElementById("dim-count").value);
         const critCount = parseInt(document.getElementById("crit-count").value);
@@ -1226,4 +1307,52 @@ function getMatrixSafe(tableId, size) {
     });
 
     return matrix;
+}
+
+// ====================== ПАРНЫЕ ИГРЫ ======================
+
+function renderPairGameMatrix(rows, cols) {
+    const container = document.getElementById("pair-matrix-section");
+    if (!container) return;
+
+    let html = `
+        <h4 style="text-align:center; margin:2rem 0 1rem; color:var(--color-primary-darker);">
+            Платежная матрица (выигрыш Игрока 1)
+        </h4>
+        <div class="table-wrapper">
+            <table class="pair-game-table" id="pair-game-matrix">
+                <thead>
+                    <tr>
+                        <th></th>`;
+
+    for (let j = 1; j <= cols; j++) {
+        html += `<th>Стратегия B${j}</th>`;
+    }
+    html += `</tr></thead><tbody>`;
+
+    for (let i = 1; i <= rows; i++) {
+        html += `<tr><th>Стратегия A${i}</th>`;
+        for (let j = 1; j <= cols; j++) {
+            html += `
+                <td>
+                    <input type="number"
+                           class="pair-cell"
+                           data-row="${i-1}"
+                           data-col="${j-1}"
+                           value="${(Math.random()*10 - 2).toFixed(1)}"
+                           step="0.1">
+                </td>`;
+        }
+        html += `</tr>`;
+    }
+
+    html += `</tbody></table></div>`;
+
+    container.innerHTML = html;
+}
+
+function randomizePairGameMatrix() {
+    document.querySelectorAll(".pair-cell").forEach(cell => {
+        cell.value = (Math.random() * 12 - 3).toFixed(1);
+    });
 }
