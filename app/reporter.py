@@ -52,6 +52,14 @@ def build_report(run_id, algorithm_id, payload, result):
         report = _report_multi_criteria(run_id, payload, result)
         _attach_report_files(report, run_id, algorithm_id, payload, result)
         return report
+    if algorithm_id == "pair_games":
+        report = _report_pair_games(run_id, payload, result)
+        _attach_report_files(report, run_id, algorithm_id, payload, result)
+        return report
+    if algorithm_id == "nature_games":
+        report = _report_nature_games(run_id, payload, result)
+        _attach_report_files(report, run_id, algorithm_id, payload, result)
+        return report
     return {
         "run_id": run_id,
         "algorithm_id": algorithm_id,
@@ -266,6 +274,175 @@ def _report_multi_criteria(run_id, payload, result):
     }
 
 
+def _report_pair_games(run_id, payload, result):
+    player1_name = payload.get("player1_name", "Игрок 1")
+    player2_name = payload.get("player2_name", "Игрок 2")
+    row_names = payload.get("player1_strategies", [])
+    col_names = payload.get("player2_strategies", [])
+    matrix = payload.get("payoff_matrix", [])
+
+    reduction = result.get("reduction", {})
+    saddle = result.get("saddle_point", {})
+    mixed = result.get("mixed_strategies")
+    value = result.get("value")
+
+    markdown = [
+        "# Отчёт по расчёту",
+        "",
+        "**Метод:** Парные игры (матричная игра двух лиц)",
+        "",
+        f'<span style="color:#9ca3af; font-size:0.9em;">Run ID: {run_id}</span>',
+        "",
+        f"**Игрок 1:** {player1_name}",
+        f"**Игрок 2:** {player2_name}",
+        "",
+        "## Платёжная матрица",
+        _build_md_matrix(row_names, col_names, matrix),
+    ]
+
+    steps = reduction.get("steps", [])
+    if steps:
+        markdown.append("")
+        markdown.append("## Сокращение доминированием")
+        for step in steps:
+            markdown.append(
+                f"- Удалена {step.get('kind')} '{step.get('removed')}' "
+                f"(доминируется '{step.get('by')}')"
+            )
+
+    if saddle and saddle.get("exists"):
+        markdown.extend([
+            "",
+            "## Седловая точка",
+            f"Значение игры: **{_fmt_float(value)}**",
+        ])
+        if saddle.get("points"):
+            for point in saddle.get("points"):
+                markdown.append(
+                    f"- ({point.get('row')}, {point.get('col')}) = {_fmt_float(point.get('value'))}"
+                )
+        if saddle.get("player1_strategies"):
+            markdown.append(
+                "Оптимальные стратегии игрока 1: "
+                + ", ".join(saddle.get("player1_strategies"))
+            )
+        if saddle.get("player2_strategies"):
+            markdown.append(
+                "Оптимальные стратегии игрока 2: "
+                + ", ".join(saddle.get("player2_strategies"))
+            )
+    elif mixed:
+        markdown.extend([
+            "",
+            "## Смешанные стратегии",
+            f"Значение игры: **{_fmt_float(value)}**",
+        ])
+
+        p1 = mixed.get("player1", {})
+        p2 = mixed.get("player2", {})
+        if p1:
+            markdown.append("")
+            markdown.append("### Игрок 1")
+            rows = []
+            for name, prob in zip(p1.get("strategies", []), p1.get("probabilities", [])):
+                rows.append([name, _fmt_float(prob)])
+            markdown.append(_build_md_table(["Стратегия", "Вероятность"], rows))
+        if p2:
+            markdown.append("")
+            markdown.append("### Игрок 2")
+            rows = []
+            for name, prob in zip(p2.get("strategies", []), p2.get("probabilities", [])):
+                rows.append([name, _fmt_float(prob)])
+            markdown.append(_build_md_table(["Стратегия", "Вероятность"], rows))
+
+    return {
+        "run_id": run_id,
+        "algorithm_id": "pair_games",
+        "markdown": "\n".join(markdown),
+    }
+
+
+def _report_nature_games(run_id, payload, result):
+    decision_maker = payload.get("decision_maker", "Лицо, принимающее решение")
+    strategies = payload.get("strategies", [])
+    states = payload.get("states_of_nature", [])
+    payoff_matrix = payload.get("payoff_matrix", [])
+    hurwicz_lambda = payload.get("lambda", 0.5)
+    selected = payload.get("selected_criteria")
+
+    risk_matrix = result.get("risk_matrix", [])
+    criteria = result.get("criteria", {})
+    comparison = result.get("comparison_table", [])
+    notes = result.get("notes", [])
+
+    markdown = [
+        "# Отчёт по расчёту",
+        "",
+        "**Метод:** Игры с природой (принятие решений в условиях неопределенности)",
+        "",
+        f'<span style="color:#9ca3af; font-size:0.9em;">Run ID: {run_id}</span>',
+        "",
+        f"**ЛПР:** {decision_maker}",
+        f"**Коэффициент Гурвица:** {hurwicz_lambda}",
+    ]
+
+    if selected:
+        markdown.append("**Выбранные критерии:** " + ", ".join(selected))
+
+    markdown.extend([
+        "",
+        "## Матрица выигрышей",
+        _build_md_matrix(strategies, states, payoff_matrix),
+    ])
+
+    if risk_matrix:
+        markdown.extend([
+            "",
+            "## Матрица рисков",
+            _build_md_matrix(strategies, states, risk_matrix),
+        ])
+
+    if criteria:
+        markdown.append("")
+        markdown.append("## Рекомендуемые стратегии")
+        for key, block in criteria.items():
+            if selected and key not in selected:
+                continue
+            rec = ", ".join(block.get("recommended_strategies", []) or [])
+            value = block.get("value")
+            value_str = _fmt_float(value) if value is not None else "—"
+            markdown.append(f"- **{key.capitalize()}**: {rec or '—'} (значение: {value_str})")
+
+    if comparison:
+        markdown.append("")
+        markdown.append("## Сравнительная таблица")
+        rows = []
+        for row in comparison:
+            rows.append([
+                row.get("strategy"),
+                _fmt_float(row.get("wald")),
+                _fmt_float(row.get("savage")),
+                _fmt_float(row.get("hurwicz")),
+                _fmt_float(row.get("laplace")),
+                _fmt_float(row.get("bayes")),
+            ])
+        markdown.append(_build_md_table(
+            ["Стратегия", "Wald", "Savage", "Hurwicz", "Laplace", "Bayes"],
+            rows,
+        ))
+
+    if notes:
+        markdown.append("")
+        for note in notes:
+            markdown.append(f"> {note}")
+
+    return {
+        "run_id": run_id,
+        "algorithm_id": "nature_games",
+        "markdown": "\n".join(markdown),
+    }
+
+
 def _build_multi_criteria_charts(optimum, is_feasible):
     """Строит столбчатую диаграмму значений критериев в оптимальной точке."""
     if not optimum or not is_feasible:
@@ -385,6 +562,44 @@ def _write_report_csv(path, algorithm_id, payload, result):
             writer.writerow(["criteria_values", "", "", ""])
             for name, val in optimum.items():
                 writer.writerow(["criteria_value", name, val, ""])
+        elif algorithm_id == "pair_games":
+            player1 = payload.get("player1_name", "Игрок 1")
+            player2 = payload.get("player2_name", "Игрок 2")
+            writer.writerow(["players", "player1", player1, ""])
+            writer.writerow(["players", "player2", player2, ""])
+
+            writer.writerow(["", "", "", ""])
+            writer.writerow(["game_value", "", result.get("value"), ""])
+
+            saddle = result.get("saddle_point", {})
+            if saddle.get("exists"):
+                writer.writerow(["saddle_point", "exists", True, ""])
+                for point in saddle.get("points", []):
+                    writer.writerow([
+                        "saddle_point",
+                        f"{point.get('row')}:{point.get('col')}",
+                        point.get("value"),
+                        "",
+                    ])
+            mixed = result.get("mixed_strategies")
+            if mixed:
+                writer.writerow(["", "", "", ""])
+                writer.writerow(["mixed_strategies", "player1", "", ""])
+                for name, prob in zip(mixed.get("player1", {}).get("strategies", []), mixed.get("player1", {}).get("probabilities", [])):
+                    writer.writerow(["player1_strategy", name, prob, ""])
+                writer.writerow(["mixed_strategies", "player2", "", ""])
+                for name, prob in zip(mixed.get("player2", {}).get("strategies", []), mixed.get("player2", {}).get("probabilities", [])):
+                    writer.writerow(["player2_strategy", name, prob, ""])
+        elif algorithm_id == "nature_games":
+            writer.writerow(["decision_maker", "", payload.get("decision_maker", ""), ""])
+            writer.writerow(["hurwicz_lambda", "", payload.get("lambda", 0.5), ""])
+
+            writer.writerow(["", "", "", ""])
+            writer.writerow(["criteria_recommendations", "", "", ""])
+            criteria = result.get("criteria", {})
+            for key, block in criteria.items():
+                rec = ", ".join(block.get("recommended_strategies", []) or [])
+                writer.writerow([key, rec, block.get("value"), ""])
 
 
 def _write_report_pdf(path, algorithm_id, payload, result):
@@ -438,6 +653,36 @@ def _write_report_pdf(path, algorithm_id, payload, result):
                 lines.append(f"- {name}: {val:.4f}")
         else:
             lines.append("Допустимое решение не найдено.")
+    elif algorithm_id == "pair_games":
+        lines.append(f"Игрок 1: {payload.get('player1_name', 'Игрок 1')}")
+        lines.append(f"Игрок 2: {payload.get('player2_name', 'Игрок 2')}")
+        lines.append("")
+        lines.append(f"Значение игры: {result.get('value')}")
+
+        saddle = result.get("saddle_point", {})
+        if saddle.get("exists"):
+            lines.append("Седловая точка: да")
+            for point in saddle.get("points", []):
+                lines.append(
+                    f"- ({point.get('row')}, {point.get('col')}) = {point.get('value')}"
+                )
+        else:
+            lines.append("Седловая точка: нет")
+            mixed = result.get("mixed_strategies")
+            if mixed:
+                lines.append("Смешанные стратегии:")
+                for name, prob in zip(mixed.get("player1", {}).get("strategies", []), mixed.get("player1", {}).get("probabilities", [])):
+                    lines.append(f"- {name}: {prob}")
+    elif algorithm_id == "nature_games":
+        lines.append(f"ЛПР: {payload.get('decision_maker', '')}")
+        lines.append(f"Коэффициент Гурвица: {payload.get('lambda', 0.5)}")
+        lines.append("")
+        lines.append("Рекомендуемые стратегии:")
+        criteria = result.get("criteria", {})
+        for key, block in criteria.items():
+            rec = ", ".join(block.get("recommended_strategies", []) or [])
+            value = block.get("value")
+            lines.append(f"- {key}: {rec} (значение: {value})")
     else:
         lines.append("Данные для отчёта будут добавлены позже.")
 

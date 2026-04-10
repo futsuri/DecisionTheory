@@ -76,7 +76,7 @@ function getMethodNameById(id) {
     const map = {
         ahp: "Метод анализа иерархий (AHP)",
         multi_criteria: "Многокритериальная оптимизация",
-        pair_games: "Парные игры (матричные игры)",
+        pair_games: "Парные игры",
         nature_games: "Игры с природой"
     };
     return map[id] || `Метод ${id}`;
@@ -600,10 +600,35 @@ function collectFormData(algId) {
             matrix.push(rowData);
         });
 
+        if (!matrix.length || !matrix[0] || matrix[0].length === 0) {
+            throw new Error("Заполните матрицу выигрышей (минимум 2x2)");
+        }
+        const rowCount = matrix.length;
+        const colCount = matrix[0].length;
+        if (rowCount < 2 || colCount < 2) {
+            throw new Error("Матрица должна быть минимум 2x2");
+        }
+        if (rowCount > 12 || colCount > 12) {
+            throw new Error("Матрица не должна превышать 12x12");
+        }
+        if (matrix.some(row => row.length !== colCount)) {
+            throw new Error("Матрица должна быть прямоугольной");
+        }
+
+        const player1Name = document.getElementById("player1-name")?.value?.trim() || "Игрок 1";
+        const player2Name = document.getElementById("player2-name")?.value?.trim() || "Игрок 2";
+        const player1Strategies = Array.from({ length: rowCount }, (_, i) => `A${i + 1}`);
+        const player2Strategies = Array.from({ length: colCount }, (_, i) => `B${i + 1}`);
+
         return {
             algorithm_id: algId,
             input: {
                 payoff_matrix: matrix,
+                player1_name: player1Name,
+                player2_name: player2Name,
+                player1_strategies: player1Strategies,
+                player2_strategies: player2Strategies,
+                is_zero_sum: true,
                 description: "Матричная игра двух лиц с нулевой суммой"
             }
         };
@@ -620,20 +645,48 @@ function collectFormData(algId) {
             matrix.push(rowData);
         });
 
+        if (!matrix.length || !matrix[0] || matrix[0].length === 0) {
+            throw new Error("Заполните матрицу выигрышей (минимум 2x2)");
+        }
+        const rowCount = matrix.length;
+        const colCount = matrix[0].length;
+        if (rowCount < 2 || colCount < 2) {
+            throw new Error("Матрица должна быть минимум 2x2");
+        }
+        if (rowCount > 12 || colCount > 12) {
+            throw new Error("Матрица не должна превышать 12x12");
+        }
+        if (matrix.some(row => row.length !== colCount)) {
+            throw new Error("Матрица должна быть прямоугольной");
+        }
+
         const selectedCriteria = [];
         document.querySelectorAll('.nature-criterion:checked').forEach(chk => {
             selectedCriteria.push(chk.value);
         });
 
+        if (selectedCriteria.length === 0) {
+            throw new Error("Выберите хотя бы один критерий оптимальности");
+        }
+
         const hurwiczAlpha = parseFloat(document.getElementById("hurwicz-alpha")?.value) || 0.5;
+        if (hurwiczAlpha < 0 || hurwiczAlpha > 1) {
+            throw new Error("Коэффициент Гурвица должен быть от 0 до 1");
+        }
+
+        const strategies = Array.from({ length: rowCount }, (_, i) => `X${i + 1}`);
+        const states = Array.from({ length: colCount }, (_, i) => `S${i + 1}`);
 
         return {
             algorithm_id: algId,
             input: {
                 payoff_matrix: matrix,
                 decision_maker: document.getElementById("decision-maker")?.value || "ЛПР",
-                criteria: selectedCriteria,
-                hurwicz_alpha: hurwiczAlpha
+                strategies,
+                states_of_nature: states,
+                selected_criteria: selectedCriteria,
+                hurwicz_alpha: hurwiczAlpha,
+                optimization: "max"
             }
         };
     }
@@ -661,7 +714,7 @@ function collectFormData(algId) {
             const direction = document.querySelectorAll('.crit-direction')[idx].value;
 
             const coeffs = [];
-            for (let col = 1; col <= dimCount; col++) {
+            for (let col = 0; col <= dimCount; col++) {
                 const val = parseFloat(document.querySelector(`.crit-coeff[data-row="${row}"][data-col="${col}"]`).value) || 0;
                 coeffs.push(val);
             }
@@ -698,6 +751,22 @@ function collectFormData(algId) {
                 variable_bounds
             }
         };
+
+        variable_bounds.forEach((bounds, idx) => {
+            if (bounds[0] >= bounds[1]) {
+                throw new Error(`Границы переменной x${idx + 1}: min должен быть меньше max`);
+            }
+        });
+
+        criteria.forEach((crit) => {
+            if (crit.func_type === "logarithmic") {
+                variable_bounds.forEach((bounds, idx) => {
+                    if (bounds[0] <= 0) {
+                        throw new Error(`Для логарифмической функции x${idx + 1} должен быть > 0`);
+                    }
+                });
+            }
+        });
 
         console.log("Payload:", JSON.stringify(payload, null, 2));
         return payload;
@@ -892,6 +961,7 @@ function renderMultiCriteriaForm(dimCount, critCount) {
     html += '<th>Название критерия</th>';
     html += '<th>Тип функции</th>';
     html += '<th>Направление</th>';
+    html += '<th>a0</th>';
     for (let i = 1; i <= dimCount; i++) {
         html += `<th>a${i}</th>`;
     }
@@ -912,7 +982,7 @@ function renderMultiCriteriaForm(dimCount, critCount) {
             <option value="max">Максимизация</option>
             <option value="min">Минимизация</option>
         </select></td>`;
-        for (let col = 1; col <= dimCount; col++) {
+        for (let col = 0; col <= dimCount; col++) {
             html += `<td><input type="number" class="crit-coeff" data-row="${j}" data-col="${col}" value="0" step="any"></td>`;
         }
         // Ограничение: select оператор + input значение
@@ -1140,7 +1210,8 @@ function applyMultiCriteriaPrefill(inputData) {
     const variableBounds = Array.isArray(inputData.variable_bounds) ? inputData.variable_bounds : [];
 
     const coeffLengths = criteria.map(item => (item.params && item.params.coeffs ? item.params.coeffs.length : 0));
-    const dimCount = Math.max(variableBounds.length || 0, ...coeffLengths, 1);
+    const coeffDims = coeffLengths.map(len => Math.max(len - 1, 0));
+    const dimCount = Math.max(variableBounds.length || 0, ...coeffDims, 1);
     const critCount = Math.max(criteria.length, 1);
 
     const dimInput = document.getElementById("dim-count");
@@ -1170,7 +1241,7 @@ function applyMultiCriteriaPrefill(inputData) {
     criteria.forEach((item, idx) => {
         const coeffs = item.params && Array.isArray(item.params.coeffs) ? item.params.coeffs : [];
         coeffs.forEach((value, colIdx) => {
-            const input = document.querySelector(`.crit-coeff[data-row="${idx + 1}"][data-col="${colIdx + 1}"]`);
+            const input = document.querySelector(`.crit-coeff[data-row="${idx + 1}"][data-col="${colIdx}"]`);
             if (input) {
                 input.value = value;
             }
@@ -1294,7 +1365,7 @@ function applyMcFormState(state) {
     state.criteria.forEach((item, idx) => {
         const coeffs = Array.isArray(item.coeffs) ? item.coeffs : [];
         coeffs.forEach((value, colIdx) => {
-            const input = document.querySelector(`.crit-coeff[data-row="${idx + 1}"][data-col="${colIdx + 1}"]`);
+            const input = document.querySelector(`.crit-coeff[data-row="${idx + 1}"][data-col="${colIdx}"]`);
             if (input) {
                 input.value = value;
             }

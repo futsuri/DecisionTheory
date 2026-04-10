@@ -21,5 +21,32 @@
       "main_criterion": "str|None"
     },
     "available": true
+  },
+  {
+    "id": "pair_games",
+    "name": "Парные игры",
+    "description": "Двухсторонние матричные игры, равновесие и оптимальные стратегии.",
+    "input_schema": {
+      "player1_name": "str",
+      "player2_name": "str",
+      "player1_strategies": "list[str]",
+      "player2_strategies": "list[str]",
+      "payoff_matrix": "list[list[float]]"
+    },
+    "available": true
+  },
+  {
+    "id": "nature_games",
+    "name": "Игры с природой",
+    "description": "Критерии Вальда, Лапласа, Гурвица, Сэвиджа и Байеса.",
+    "input_schema": {
+      "decision_maker": "str",
+      "strategies": "list[str]",
+      "states_of_nature": "list[str]",
+      "payoff_matrix": "list[list[float]]",
+      "optimization": "max|min",
+      "lambda": "float"
+    },
+    "available": true
   }
 ]

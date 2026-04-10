@@ -19,7 +19,7 @@ class Config:
     POSTGRES_CONNECT_TIMEOUT = int(os.getenv("POSTGRES_CONNECT_TIMEOUT", "3"))
 
     # Доступные методы решения
-    ALLOWED_METHODS = {"ahp", "multi_criteria"}
+    ALLOWED_METHODS = {"ahp", "multi_criteria", "pair_games", "nature_games"}
 
     # Лимиты
     MAX_PAYLOAD_SIZE_KB = int(os.getenv("MAX_PAYLOAD_SIZE_KB", "512"))

@@ -14,34 +14,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Показываем индикатор загрузки
     showLoading("methods-container", "Загрузка методов...");
 
-    // Вместо загрузки из JSON — сразу задаём список методов
-    const methods = [
-        {
-            id: "ahp",
-            name: "Метод анализа иерархий (AHP)",
-            description: "Попарные сравнения критериев и альтернатив.",
-            available: true
-        },
-        {
-            id: "multi_criteria",
-            name: "Многокритериальная оптимизация",
-            description: "Непрерывные данные и функции полезности для критериев.",
-            available: true
-        },
-        {
-            id: "pair_games",
-            name: "Парные игры",
-            description: "Анализ двухсторонних матричных игр, поиск равновесий и оптимальных стратегий.",
-            available: true
-        },
-        {
-            id: "nature_games",
-            name: "Игры с природой",
-            description: "Принятие решений в условиях неопределённости (критерии Вальда, Лапласа, Гурвица и др.).",
-            available: true
-        }
-        // Добавляй новые методы сюда — они автоматически появятся на странице
-    ];
+    let methods = [];
+    try {
+        methods = await fetchAlgorithms();
+    } catch (err) {
+        console.error("Ошибка загрузки методов:", err);
+        showError("methods-container", "Не удалось загрузить список методов");
+        return;
+    }
 
     // Убираем лоадер
     container.innerHTML = "";

@@ -9,7 +9,9 @@ import uuid
 from flask import current_app
 
 from app.algorithms.ahp import run_ahp
+from app.algorithms.decision_under_uncertainty import run_algorithm as run_nature_games
 from app.algorithms.multi_criteria import run_multi_criteria
+from app.algorithms.two_player_game import run_algorithm as run_pair_games
 from app.db import get_run as fetch_run, insert_report, insert_run, update_run
 from app.reporter import build_report
 from app.utils import (
@@ -42,6 +44,34 @@ ALGORITHMS = [
             "criteria": "list[{name, weight, func_type, direction, params}]",
             "constraints": "dict[str, {min, max}]",
             "main_criterion": "str|None",
+        },
+        "available": True,
+    },
+    {
+        "id": "pair_games",
+        "name": "Парные игры",
+        "description": "Двухсторонние матричные игры, равновесие и оптимальные стратегии.",
+        "input_schema": {
+            "player1_name": "str",
+            "player2_name": "str",
+            "player1_strategies": "list[str]",
+            "player2_strategies": "list[str]",
+            "payoff_matrix": "list[list[float]]",
+        },
+        "available": True,
+    },
+    {
+        "id": "nature_games",
+        "name": "Игры с природой",
+        "description": "Критерии Вальда, Лапласа, Гурвица, Сэвиджа и Байеса.",
+        "input_schema": {
+            "decision_maker": "str",
+            "strategies": "list[str]",
+            "states_of_nature": "list[str]",
+            "payoff_matrix": "list[list[float]]",
+            "optimization": "max|min",
+            "lambda": "float",
+            "probabilities": "list[float]|None",
         },
         "available": True,
     },
@@ -113,6 +143,10 @@ def _normalize_input(algorithm_id, input_data):
         return _normalize_ahp_input(input_data)
     if algorithm_id == "multi_criteria":
         return _normalize_multi_criteria_input(input_data)
+    if algorithm_id == "pair_games":
+        return _normalize_pair_games_input(input_data)
+    if algorithm_id == "nature_games":
+        return _normalize_nature_games_input(input_data)
     return input_data
 
 
@@ -206,6 +240,21 @@ def _normalize_multi_criteria_input(input_data):
         allowed_funcs = {"linear", "quadratic", "exponential", "logarithmic"}
         if nc.get("func_type") not in allowed_funcs:
             nc["func_type"] = "linear"
+        # Подровнять coeffs под ожидаемую длину
+        dim = len(normalized_bounds)
+        coeffs = params.get("coeffs", [])
+        if dim and isinstance(coeffs, list):
+            required_len = 1 + dim
+            if nc.get("func_type") == "quadratic":
+                required_len = 1 + dim + (dim * (dim + 1)) // 2
+
+            if len(coeffs) == dim:
+                coeffs = [0.0] + coeffs
+            if len(coeffs) < required_len:
+                coeffs = coeffs + [0.0] * (required_len - len(coeffs))
+            params["coeffs"] = coeffs
+            nc["params"] = params
+
         normalized_criteria.append(nc)
 
     # Привести constraints к нормальному виде
@@ -225,6 +274,103 @@ def _normalize_multi_criteria_input(input_data):
         "constraints": normalized_constraints,
         "main_criterion": main_criterion,
         "variable_bounds": normalized_bounds,
+    }
+
+
+def _normalize_pair_games_input(input_data):
+    player1_name = input_data.get("player1_name") or "Игрок 1"
+    player2_name = input_data.get("player2_name") or "Игрок 2"
+    matrix = input_data.get("payoff_matrix") or []
+
+    row_count = len(matrix) if isinstance(matrix, list) else 0
+    col_count = len(matrix[0]) if row_count and isinstance(matrix[0], list) else 0
+
+    player1_strategies = input_data.get("player1_strategies")
+    if not isinstance(player1_strategies, list) or len(player1_strategies) != row_count:
+        player1_strategies = [f"A{i + 1}" for i in range(row_count)]
+
+    player2_strategies = input_data.get("player2_strategies")
+    if not isinstance(player2_strategies, list) or len(player2_strategies) != col_count:
+        player2_strategies = [f"B{i + 1}" for i in range(col_count)]
+
+    sanitized_matrix = []
+    for row in matrix if isinstance(matrix, list) else []:
+        if not isinstance(row, list):
+            continue
+        sanitized_row = []
+        for value in row:
+            try:
+                sanitized_row.append(float(value))
+            except (TypeError, ValueError):
+                sanitized_row.append(0.0)
+        sanitized_matrix.append(sanitized_row)
+
+    return {
+        "player1_name": str(player1_name),
+        "player2_name": str(player2_name),
+        "player1_strategies": [str(x) for x in player1_strategies],
+        "player2_strategies": [str(x) for x in player2_strategies],
+        "payoff_matrix": sanitized_matrix,
+        "is_zero_sum": bool(input_data.get("is_zero_sum", True)),
+    }
+
+
+def _normalize_nature_games_input(input_data):
+    decision_maker = input_data.get("decision_maker") or "Лицо, принимающее решение"
+    matrix = input_data.get("payoff_matrix") or []
+
+    row_count = len(matrix) if isinstance(matrix, list) else 0
+    col_count = len(matrix[0]) if row_count and isinstance(matrix[0], list) else 0
+
+    strategies = input_data.get("strategies")
+    if not isinstance(strategies, list) or len(strategies) != row_count:
+        strategies = [f"X{i + 1}" for i in range(row_count)]
+
+    states = input_data.get("states_of_nature")
+    if not isinstance(states, list) or len(states) != col_count:
+        states = [f"S{i + 1}" for i in range(col_count)]
+
+    probabilities = input_data.get("probabilities")
+    if isinstance(probabilities, list):
+        normalized_probs = []
+        for value in probabilities:
+            try:
+                normalized_probs.append(float(value))
+            except (TypeError, ValueError):
+                normalized_probs.append(0.0)
+        probabilities = normalized_probs
+    else:
+        probabilities = None
+
+    hurwicz_value = input_data.get("lambda")
+    if hurwicz_value is None:
+        hurwicz_value = input_data.get("hurwicz_alpha")
+
+    selected_criteria = input_data.get("selected_criteria")
+    if selected_criteria is None:
+        selected_criteria = input_data.get("criteria")
+
+    sanitized_matrix = []
+    for row in matrix if isinstance(matrix, list) else []:
+        if not isinstance(row, list):
+            continue
+        sanitized_row = []
+        for value in row:
+            try:
+                sanitized_row.append(float(value))
+            except (TypeError, ValueError):
+                sanitized_row.append(0.0)
+        sanitized_matrix.append(sanitized_row)
+
+    return {
+        "decision_maker": str(decision_maker),
+        "strategies": [str(x) for x in strategies],
+        "states_of_nature": [str(x) for x in states],
+        "payoff_matrix": sanitized_matrix,
+        "optimization": input_data.get("optimization", "max"),
+        "lambda": float(hurwicz_value) if hurwicz_value is not None else 0.5,
+        "probabilities": probabilities,
+        "selected_criteria": selected_criteria,
     }
 
 
@@ -268,6 +414,10 @@ def _validate_for_algorithm(algorithm_id, payload):
 
     if algorithm_id == "multi_criteria":
         _validate_multi_criteria_deep(payload)
+    if algorithm_id == "pair_games":
+        _validate_pair_games_deep(payload)
+    if algorithm_id == "nature_games":
+        _validate_nature_games_deep(payload)
 
 
 def _validate_ahp_alt_matrices(payload):
@@ -418,10 +568,10 @@ def _validate_multi_criteria_deep(payload):
         required_len = 1 + dim
         if func_type == "quadratic":
             required_len = 1 + dim + (dim * (dim + 1)) // 2
-        if len(coeffs) != required_len:
+        if len(coeffs) > required_len:
             raise ValueError(
                 f"MultiCriteria: criteria[{i}] ('{name}') — число коэффициентов ({len(coeffs)}) "
-                f"должно быть {required_len} для типа '{func_type}' при размерности {dim}"
+                f"должно быть не больше {required_len} для типа '{func_type}' при размерности {dim}"
             )
         for j, v in enumerate(coeffs):
             try:
@@ -456,4 +606,73 @@ def _dispatch(algorithm_id, payload):
         return run_ahp(payload)
     if algorithm_id == "multi_criteria":
         return run_multi_criteria(payload)
+    if algorithm_id == "pair_games":
+        result = run_pair_games(payload)
+        if result.get("status") != "success":
+            raise ValueError(result.get("result", {}).get("error", "Pair games failed"))
+        return result.get("result", {})
+    if algorithm_id == "nature_games":
+        result = run_nature_games(payload)
+        if result.get("status") != "success":
+            raise ValueError(result.get("result", {}).get("error", "Nature games failed"))
+        return result.get("result", {})
     raise ValueError(f"No dispatcher for algorithm '{algorithm_id}'")
+
+
+def _validate_pair_games_deep(payload):
+    matrix = payload.get("payoff_matrix") or []
+    if not isinstance(matrix, list) or not matrix:
+        raise ValueError("PairGames: 'payoff_matrix' must be a non-empty 2D list")
+
+    rows = len(matrix)
+    cols = len(matrix[0]) if matrix and isinstance(matrix[0], list) else 0
+
+    if rows < 2 or cols < 2:
+        raise ValueError("PairGames: матрица должна быть размером минимум 2x2")
+    if rows > 12 or cols > 12:
+        raise ValueError("PairGames: матрица не должна превышать 12x12")
+
+    if any(not isinstance(row, list) or len(row) != cols for row in matrix):
+        raise ValueError("PairGames: 'payoff_matrix' должна быть прямоугольной матрицей")
+
+    strategies1 = payload.get("player1_strategies") or []
+    strategies2 = payload.get("player2_strategies") or []
+    if len(strategies1) != rows:
+        raise ValueError("PairGames: число стратегий игрока 1 не совпадает с числом строк")
+    if len(strategies2) != cols:
+        raise ValueError("PairGames: число стратегий игрока 2 не совпадает с числом столбцов")
+
+
+def _validate_nature_games_deep(payload):
+    matrix = payload.get("payoff_matrix") or []
+    if not isinstance(matrix, list) or not matrix:
+        raise ValueError("NatureGames: 'payoff_matrix' must be a non-empty 2D list")
+
+    rows = len(matrix)
+    cols = len(matrix[0]) if matrix and isinstance(matrix[0], list) else 0
+
+    if rows < 2 or cols < 2:
+        raise ValueError("NatureGames: матрица должна быть размером минимум 2x2")
+    if rows > 12 or cols > 12:
+        raise ValueError("NatureGames: матрица не должна превышать 12x12")
+
+    if any(not isinstance(row, list) or len(row) != cols for row in matrix):
+        raise ValueError("NatureGames: 'payoff_matrix' должна быть прямоугольной матрицей")
+
+    strategies = payload.get("strategies") or []
+    states = payload.get("states_of_nature") or []
+    if len(strategies) != rows:
+        raise ValueError("NatureGames: число стратегий не совпадает с числом строк")
+    if len(states) != cols:
+        raise ValueError("NatureGames: число состояний не совпадает с числом столбцов")
+
+    hurwicz_lambda = payload.get("lambda", 0.5)
+    if not (0.0 <= hurwicz_lambda <= 1.0):
+        raise ValueError("NatureGames: коэффициент Гурвица должен быть от 0 до 1")
+
+    probs = payload.get("probabilities")
+    if probs is not None:
+        if not isinstance(probs, list) or len(probs) != cols:
+            raise ValueError("NatureGames: 'probabilities' должен быть списком длины states_of_nature")
+        if sum(probs) <= 0:
+            raise ValueError("NatureGames: сумма вероятностей должна быть положительной")
