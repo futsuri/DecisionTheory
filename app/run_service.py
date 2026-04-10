@@ -629,8 +629,6 @@ def _validate_pair_games_deep(payload):
 
     if rows < 2 or cols < 2:
         raise ValueError("PairGames: матрица должна быть размером минимум 2x2")
-    if rows > 12 or cols > 12:
-        raise ValueError("PairGames: матрица не должна превышать 12x12")
 
     if any(not isinstance(row, list) or len(row) != cols for row in matrix):
         raise ValueError("PairGames: 'payoff_matrix' должна быть прямоугольной матрицей")
@@ -653,8 +651,6 @@ def _validate_nature_games_deep(payload):
 
     if rows < 2 or cols < 2:
         raise ValueError("NatureGames: матрица должна быть размером минимум 2x2")
-    if rows > 12 or cols > 12:
-        raise ValueError("NatureGames: матрица не должна превышать 12x12")
 
     if any(not isinstance(row, list) or len(row) != cols for row in matrix):
         raise ValueError("NatureGames: 'payoff_matrix' должна быть прямоугольной матрицей")

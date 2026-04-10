@@ -12,67 +12,11 @@ const DEFAULT_STATE = {
         [0, 2, 4],
         [-2, 1, 3]
     ],
-    isZeroSum: true
+    isZeroSum: true,
+    description: ""
 };
 
-const EXAMPLES = [
-    {
-        id: "cyber",
-        title: "Защита корпоративной сети",
-        player1Name: "Киберзащита",
-        player2Name: "Атакующий",
-        rowNames: ["Сегментация", "EDR + SIEM", "Zero Trust"],
-        colNames: ["Фишинг", "Ransomware", "Supply-chain"],
-        matrix: [
-            [6, 2, 3],
-            [4, 7, 5],
-            [5, 6, 8]
-        ],
-        isZeroSum: true
-    },
-    {
-        id: "supply",
-        title: "Логистика и цепочки поставок",
-        player1Name: "Производитель",
-        player2Name: "Рынок",
-        rowNames: ["Запас", "JIT", "Гибрид"],
-        colNames: ["Стабильный спрос", "Колебания", "Дефицит"],
-        matrix: [
-            [5, 2, -1],
-            [1, 4, 3],
-            [3, 3, 4]
-        ],
-        isZeroSum: false
-    },
-    {
-        id: "airline",
-        title: "Авиакомпания: ценообразование",
-        player1Name: "Авиакомпания",
-        player2Name: "Конкурент",
-        rowNames: ["Премиум", "Сбалансированно", "Дискаунтер"],
-        colNames: ["Премиум", "Сбалансированно", "Дискаунтер"],
-        matrix: [
-            [7, 2, -1],
-            [4, 5, 1],
-            [-2, 2, 3]
-        ],
-        isZeroSum: false
-    },
-    {
-        id: "energy",
-        title: "Энергорынок: контрактные стратегии",
-        player1Name: "Генерация",
-        player2Name: "Сбыт",
-        rowNames: ["Фикс", "Плавающая", "Комбинированная"],
-        colNames: ["Длинные", "Короткие", "Смешанные"],
-        matrix: [
-            [3, 6, 4],
-            [5, 2, 3],
-            [4, 5, 5]
-        ],
-        isZeroSum: false
-    }
-];
+let examples = [];
 
 const state = load(STORAGE_KEY, DEFAULT_STATE);
 
@@ -85,6 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.matrixWrap = document.getElementById("pair-matrix-wrap");
     elements.status = document.getElementById("pair-status");
     elements.exampleSelect = document.getElementById("pair-example-select");
+    elements.description = document.getElementById("pair-description");
 
     initExamples();
     bindControls();
@@ -93,15 +38,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function initExamples() {
     if (!elements.exampleSelect) return;
-    elements.exampleSelect.innerHTML = EXAMPLES.map(example => (
-        `<option value="${example.id}">${example.title}</option>`
-    )).join("");
-    elements.exampleSelect.value = EXAMPLES[0].id;
+    loadExamples().then(() => {
+        elements.exampleSelect.innerHTML = examples.map(example => (
+            `<option value="${example.id}">${example.title}</option>`
+        )).join("");
+        if (examples.length) {
+            elements.exampleSelect.value = examples[0].id;
+        }
+    });
 
     const btn = document.getElementById("pair-example-btn");
     if (btn) {
         btn.addEventListener("click", () => {
-            const example = EXAMPLES.find(item => item.id === elements.exampleSelect.value);
+            const example = examples.find(item => item.id === elements.exampleSelect.value);
             if (example) {
                 applyExample(example);
             }
@@ -113,6 +62,11 @@ function bindControls() {
     const submitBtn = document.getElementById("pair-submit");
     if (submitBtn) {
         submitBtn.addEventListener("click", onSubmit);
+    }
+
+    const resetBtn = document.getElementById("pair-reset");
+    if (resetBtn) {
+        resetBtn.addEventListener("click", onReset);
     }
 
     const addRow = document.getElementById("add-row");
@@ -149,6 +103,7 @@ function render() {
     if (elements.player1) elements.player1.value = state.player1Name;
     if (elements.player2) elements.player2.value = state.player2Name;
     if (elements.zeroSum) elements.zeroSum.checked = Boolean(state.isZeroSum);
+    renderDescription();
 
     renderMatrix();
 }
@@ -225,8 +180,8 @@ function normalizeMatrix(matrix, rows, cols) {
 }
 
 function resizeMatrix(rowDelta, colDelta) {
-    const nextRows = Math.min(Math.max(state.rowNames.length + rowDelta, 2), 12);
-    const nextCols = Math.min(Math.max(state.colNames.length + colDelta, 2), 12);
+    const nextRows = Math.max(state.rowNames.length + rowDelta, 2);
+    const nextCols = Math.max(state.colNames.length + colDelta, 2);
 
     if (nextRows !== state.rowNames.length) {
         if (nextRows > state.rowNames.length) {
@@ -250,14 +205,81 @@ function resizeMatrix(rowDelta, colDelta) {
 }
 
 function applyExample(example) {
-    state.player1Name = example.player1Name;
-    state.player2Name = example.player2Name;
-    state.rowNames = example.rowNames.slice();
-    state.colNames = example.colNames.slice();
-    state.matrix = example.matrix.map(row => row.slice());
-    state.isZeroSum = Boolean(example.isZeroSum);
+    const data = example.data || {};
+    state.player1Name = data.player1_name || "Игрок 1";
+    state.player2Name = data.player2_name || "Игрок 2";
+    state.rowNames = Array.isArray(data.player1_strategies) ? data.player1_strategies.slice() : [];
+    state.colNames = Array.isArray(data.player2_strategies) ? data.player2_strategies.slice() : [];
+    state.matrix = Array.isArray(data.payoff_matrix) ? data.payoff_matrix.map(row => row.slice()) : [];
+    state.isZeroSum = Boolean(data.zero_sum ?? true);
+    state.description = example.description || "";
     persist();
     render();
+}
+
+function onReset() {
+    state.player1Name = "Игрок 1";
+    state.player2Name = "Игрок 2";
+    state.rowNames = ["A1", "A2"];
+    state.colNames = ["B1", "B2"];
+    state.matrix = [[0, 0], [0, 0]];
+    state.isZeroSum = true;
+    state.description = "";
+    persist();
+    render();
+}
+
+function renderDescription() {
+    if (!elements.description) {
+        return;
+    }
+    const text = (state.description || "").trim();
+    if (!text) {
+        elements.description.style.display = "none";
+        elements.description.innerHTML = "";
+        return;
+    }
+    elements.description.style.display = "block";
+    elements.description.innerHTML = buildDescriptionHtml(text, "pair");
+}
+
+async function loadExamples() {
+    try {
+        const res = await fetch("mocks/examples.json");
+        if (!res.ok) {
+            throw new Error("Failed to load examples");
+        }
+        const payload = await res.json();
+        const all = Array.isArray(payload.examples) ? payload.examples : [];
+        examples = all.filter(item => item.type === "two_player_game");
+    } catch (err) {
+        console.error("Ошибка загрузки примеров:", err);
+        examples = [];
+    }
+}
+
+function buildDescriptionHtml(text, type) {
+    const tasks = type === "pair"
+        ? [
+            "Найти оптимальные чистые или смешанные стратегии.",
+            "Определить цену игры и активные стратегии.",
+            "Проверить наличие седловой точки."
+        ]
+        : [
+            "Рассчитать матрицу рисков.",
+            "Дать рекомендации по критериям Вальда, Сэвиджа, Гурвица, Байеса, Лапласа."
+        ];
+
+    const items = tasks.map(task => (
+        `<li><span class="icon">✓</span><span>${task}</span></li>`
+    )).join("");
+
+    return `
+        <h3>Описание ситуации</h3>
+        <p>${escapeHtml(text)}</p>
+        <h4>Что решает эта задача?</h4>
+        <ul class="task-list">${items}</ul>
+    `;
 }
 
 async function onSubmit() {

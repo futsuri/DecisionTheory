@@ -12,67 +12,11 @@ const DEFAULT_STATE = {
         [150, 60, 20, -30],
         [90, 110, 70, 30]
     ],
-    probabilities: [0.4, 0.3, 0.2, 0.1]
+    probabilities: [0.4, 0.3, 0.2, 0.1],
+    description: ""
 };
 
-const EXAMPLES = [
-    {
-        id: "agro2026",
-        title: "Выбор культуры в агробизнесе 2026",
-        decisionMaker: "Агрохолдинг",
-        rowNames: ["Пшеница", "Кукуруза", "Подсолнечник"],
-        colNames: ["Сухой сезон", "Норма", "Влажный", "Пик спроса"],
-        matrix: [
-            [60, 120, 80, 150],
-            [70, 110, 90, 140],
-            [50, 130, 100, 160]
-        ],
-        lambda: 0.65,
-        probabilities: [0.4, 0.3, 0.2, 0.1]
-    },
-    {
-        id: "retail",
-        title: "Ритейл: запуск новой линейки",
-        decisionMaker: "Коммерческий директор",
-        rowNames: ["Премиум", "Массовый", "Нишевой"],
-        colNames: ["Спад", "Стабильность", "Рост", "Бум"],
-        matrix: [
-            [-20, 40, 80, 130],
-            [-10, 50, 90, 120],
-            [10, 30, 60, 110]
-        ],
-        lambda: 0.6,
-        probabilities: [0.35, 0.35, 0.2, 0.1]
-    },
-    {
-        id: "energy",
-        title: "Энергорынок: инвестиции в мощность",
-        decisionMaker: "Энергокомпания",
-        rowNames: ["Солнечные", "Ветровые", "Гибрид"],
-        colNames: ["Регуляторные риски", "Стабильность", "Рост спроса", "Экспорт"],
-        matrix: [
-            [30, 70, 90, 120],
-            [40, 60, 100, 110],
-            [35, 75, 95, 130]
-        ],
-        lambda: 0.7,
-        probabilities: [0.3, 0.3, 0.25, 0.15]
-    },
-    {
-        id: "healthcare",
-        title: "Медицина: распределение бюджета",
-        decisionMaker: "Директор клиники",
-        rowNames: ["Оборудование", "Персонал", "Телемедицина"],
-        colNames: ["Сокращение", "Без изменений", "Умеренный рост", "Быстрый рост"],
-        matrix: [
-            [20, 50, 70, 90],
-            [30, 60, 85, 110],
-            [25, 55, 80, 120]
-        ],
-        lambda: 0.65,
-        probabilities: [0.25, 0.35, 0.25, 0.15]
-    }
-];
+let examples = [];
 
 const state = load(STORAGE_KEY, DEFAULT_STATE);
 
@@ -85,6 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.probWrap = document.getElementById("probabilities-wrap");
     elements.status = document.getElementById("nature-status");
     elements.exampleSelect = document.getElementById("nature-example-select");
+    elements.description = document.getElementById("nature-description");
 
     initExamples();
     bindControls();
@@ -93,15 +38,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function initExamples() {
     if (!elements.exampleSelect) return;
-    elements.exampleSelect.innerHTML = EXAMPLES.map(example => (
-        `<option value="${example.id}">${example.title}</option>`
-    )).join("");
-    elements.exampleSelect.value = EXAMPLES[0].id;
+    loadExamples().then(() => {
+        elements.exampleSelect.innerHTML = examples.map(example => (
+            `<option value="${example.id}">${example.title}</option>`
+        )).join("");
+        if (examples.length) {
+            elements.exampleSelect.value = examples[0].id;
+        }
+    });
 
     const btn = document.getElementById("nature-example-btn");
     if (btn) {
         btn.addEventListener("click", () => {
-            const example = EXAMPLES.find(item => item.id === elements.exampleSelect.value);
+            const example = examples.find(item => item.id === elements.exampleSelect.value);
             if (example) {
                 applyExample(example);
             }
@@ -113,6 +62,11 @@ function bindControls() {
     const submitBtn = document.getElementById("nature-submit");
     if (submitBtn) {
         submitBtn.addEventListener("click", onSubmit);
+    }
+
+    const resetBtn = document.getElementById("nature-reset");
+    if (resetBtn) {
+        resetBtn.addEventListener("click", onReset);
     }
 
     const addRow = document.getElementById("add-row");
@@ -144,6 +98,7 @@ function bindControls() {
 function render() {
     if (elements.decisionMaker) elements.decisionMaker.value = state.decisionMaker;
     if (elements.lambda) elements.lambda.value = state.lambda;
+    renderDescription();
     renderMatrix();
     renderProbabilities();
 }
@@ -245,8 +200,8 @@ function normalizeMatrix(matrix, rows, cols) {
 }
 
 function resizeMatrix(rowDelta, colDelta) {
-    const nextRows = Math.min(Math.max(state.rowNames.length + rowDelta, 2), 4);
-    const nextCols = Math.min(Math.max(state.colNames.length + colDelta, 3), 4);
+    const nextRows = Math.max(state.rowNames.length + rowDelta, 2);
+    const nextCols = Math.max(state.colNames.length + colDelta, 3);
 
     if (nextRows !== state.rowNames.length) {
         if (nextRows > state.rowNames.length) {
@@ -271,14 +226,84 @@ function resizeMatrix(rowDelta, colDelta) {
 }
 
 function applyExample(example) {
-    state.decisionMaker = example.decisionMaker;
-    state.lambda = example.lambda;
-    state.rowNames = example.rowNames.slice();
-    state.colNames = example.colNames.slice();
-    state.matrix = example.matrix.map(row => row.slice());
-    state.probabilities = example.probabilities.slice();
+    const data = example.data || {};
+    state.decisionMaker = data.decision_maker || "ЛПР";
+    state.lambda = data.lambda ?? 0.65;
+    state.rowNames = Array.isArray(data.strategies) ? data.strategies.slice() : [];
+    state.colNames = Array.isArray(data.states_of_nature) ? data.states_of_nature.slice() : [];
+    state.matrix = Array.isArray(data.payoff_matrix) ? data.payoff_matrix.map(row => row.slice()) : [];
+    state.probabilities = Array.isArray(data.probabilities) ? data.probabilities.slice() : [];
+    state.description = example.description || "";
     persist();
     render();
+}
+
+function onReset() {
+    state.decisionMaker = "Лицо, принимающее решение";
+    state.lambda = 0.65;
+    state.rowNames = ["Стратегия 1", "Стратегия 2"];
+    state.colNames = ["Состояние 1", "Состояние 2", "Состояние 3"];
+    state.matrix = [
+        [0, 0, 0],
+        [0, 0, 0]
+    ];
+    state.probabilities = [0.4, 0.3, 0.2];
+    state.description = "";
+    persist();
+    render();
+}
+
+function renderDescription() {
+    if (!elements.description) {
+        return;
+    }
+    const text = (state.description || "").trim();
+    if (!text) {
+        elements.description.style.display = "none";
+        elements.description.innerHTML = "";
+        return;
+    }
+    elements.description.style.display = "block";
+    elements.description.innerHTML = buildDescriptionHtml(text, "nature");
+}
+
+async function loadExamples() {
+    try {
+        const res = await fetch("mocks/examples.json");
+        if (!res.ok) {
+            throw new Error("Failed to load examples");
+        }
+        const payload = await res.json();
+        const all = Array.isArray(payload.examples) ? payload.examples : [];
+        examples = all.filter(item => item.type === "nature_game");
+    } catch (err) {
+        console.error("Ошибка загрузки примеров:", err);
+        examples = [];
+    }
+}
+
+function buildDescriptionHtml(text, type) {
+    const tasks = type === "nature"
+        ? [
+            "Рассчитать матрицу рисков.",
+            "Дать рекомендации по критериям Вальда, Сэвиджа, Гурвица, Байеса, Лапласа."
+        ]
+        : [
+            "Найти оптимальные чистые или смешанные стратегии.",
+            "Определить цену игры и активные стратегии.",
+            "Проверить наличие седловой точки."
+        ];
+
+    const items = tasks.map(task => (
+        `<li><span class="icon">✓</span><span>${task}</span></li>`
+    )).join("");
+
+    return `
+        <h3>Описание ситуации</h3>
+        <p>${escapeHtml(text)}</p>
+        <h4>Что решает эта задача?</h4>
+        <ul class="task-list">${items}</ul>
+    `;
 }
 
 async function onSubmit() {

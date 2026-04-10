@@ -378,10 +378,10 @@ function renderInputForm(algId, container) {
                 <div class="setup-block setup-centered" style="margin:2rem 0;">
                     <div class="setup-row">
                         <label>Количество стратегий Игрока 1:</label>
-                        <input type="number" id="player1-strategies" min="2" max="12" value="4" style="width:80px;">
+                        <input type="number" id="player1-strategies" min="2" value="4" style="width:80px;">
 
                         <label style="margin-left:2rem;">Количество стратегий Игрока 2:</label>
-                        <input type="number" id="player2-strategies" min="2" max="12" value="4" style="width:80px;">
+                        <input type="number" id="player2-strategies" min="2" value="4" style="width:80px;">
                     </div>
                     <div class="setup-buttons">
                         <button id="generate-pair-matrix" class="primary-btn">Создать матрицу</button>
@@ -402,8 +402,8 @@ function renderInputForm(algId, container) {
             document.getElementById("generate-pair-matrix").addEventListener("click", () => {
                 const p1 = parseInt(document.getElementById("player1-strategies").value);
                 const p2 = parseInt(document.getElementById("player2-strategies").value);
-                if (p1 < 2 || p1 > 12 || p2 < 2 || p2 > 12) {
-                    alert("Количество стратегий должно быть от 2 до 12");
+                if (p1 < 2 || p2 < 2) {
+                    alert("Количество стратегий должно быть не меньше 2");
                     return;
                 }
                 generatePairGameStructure(p1, p2);
@@ -429,10 +429,10 @@ function renderInputForm(algId, container) {
                 <div class="setup-block setup-centered" style="margin:2rem 0;">
                     <div class="setup-row">
                         <label>Количество стратегий Игрока:</label>
-                        <input type="number" id="nature-strategies" min="2" max="12" value="4" style="width:80px;">
+                        <input type="number" id="nature-strategies" min="2" value="4" style="width:80px;">
 
                         <label style="margin-left:2rem;">Количество состояний природы:</label>
-                        <input type="number" id="nature-states" min="2" max="12" value="4" style="width:80px;">
+                        <input type="number" id="nature-states" min="2" value="4" style="width:80px;">
                     </div>
                     <div class="setup-buttons">
                         <button id="generate-nature-matrix" class="primary-btn">Создать матрицу</button>
@@ -479,8 +479,8 @@ function renderInputForm(algId, container) {
             document.getElementById("generate-nature-matrix").addEventListener("click", () => {
                 const strategies = parseInt(document.getElementById("nature-strategies").value);
                 const states = parseInt(document.getElementById("nature-states").value);
-                if (strategies < 2 || strategies > 12 || states < 2 || states > 12) {
-                    alert("Количество должно быть от 2 до 12");
+                if (strategies < 2 || states < 2) {
+                    alert("Количество должно быть не меньше 2");
                     return;
                 }
                 generateNatureGameStructure(strategies, states);
@@ -1753,13 +1753,90 @@ function randomizeNatureGame() {
 
 // ====================== ЗАГРУЗКА ПРИМЕРА ======================
 
-function loadExample(algorithmId) {
-    if (algorithmId === "pair_games") {
-        alert("✅ Пример для «Парных игр» будет добавлен в ближайшее время.\n\nПока вы можете использовать кнопку «Случайно заполнить».");
-        // Здесь позже будет код загрузки реального примера
+async function loadExample(algorithmId) {
+    try {
+        const res = await fetch("mocks/examples.json");
+        if (!res.ok) {
+            throw new Error("Не удалось загрузить примеры");
+        }
+        const payload = await res.json();
+        const all = Array.isArray(payload.examples) ? payload.examples : [];
+        const type = algorithmId === "pair_games" ? "two_player_game" : "nature_game";
+        const example = all.find(item => item.type === type);
+
+        if (!example) {
+            alert("Пример не найден");
+            return;
+        }
+
+        if (algorithmId === "pair_games") {
+            applyPairGameExample(example.data || {});
+        } else if (algorithmId === "nature_games") {
+            applyNatureGameExample(example.data || {});
+        }
+    } catch (err) {
+        console.error("Ошибка загрузки примера:", err);
+        alert("Не удалось загрузить пример");
     }
-    else if (algorithmId === "nature_games") {
-        alert("✅ Пример для «Игр с природой» будет добавлен в ближайшее время.\n\nПока вы можете использовать кнопку «Случайно заполнить».");
-        // Здесь позже будет код загрузки реального примера
+}
+
+function applyPairGameExample(data) {
+    const matrix = Array.isArray(data.payoff_matrix) ? data.payoff_matrix : [];
+    const rows = matrix.length || 2;
+    const cols = matrix[0] ? matrix[0].length : 2;
+
+    generatePairGameStructure(rows, cols);
+
+    const p1 = document.getElementById("player1-name");
+    const p2 = document.getElementById("player2-name");
+    if (p1) p1.value = data.player1_name || "Игрок 1";
+    if (p2) p2.value = data.player2_name || "Игрок 2";
+
+    fillPairGameMatrix(matrix);
+}
+
+function applyNatureGameExample(data) {
+    const matrix = Array.isArray(data.payoff_matrix) ? data.payoff_matrix : [];
+    const rows = matrix.length || 2;
+    const cols = matrix[0] ? matrix[0].length : 3;
+
+    generateNatureGameStructure(rows, cols);
+
+    const dm = document.getElementById("decision-maker");
+    if (dm) dm.value = data.decision_maker || "ЛПР";
+
+    const lambda = document.getElementById("hurwicz-alpha");
+    if (lambda && data.lambda !== undefined) {
+        lambda.value = data.lambda;
     }
+
+    fillNatureGameMatrix(matrix);
+}
+
+function fillPairGameMatrix(matrix) {
+    const table = document.getElementById("pair-game-matrix");
+    if (!table) return;
+    const rows = table.querySelectorAll("tbody tr");
+    rows.forEach((row, rIdx) => {
+        const cells = row.querySelectorAll(".pair-cell");
+        cells.forEach((cell, cIdx) => {
+            if (matrix[rIdx] && matrix[rIdx][cIdx] !== undefined) {
+                cell.value = matrix[rIdx][cIdx];
+            }
+        });
+    });
+}
+
+function fillNatureGameMatrix(matrix) {
+    const table = document.getElementById("nature-game-matrix");
+    if (!table) return;
+    const rows = table.querySelectorAll("tbody tr");
+    rows.forEach((row, rIdx) => {
+        const cells = row.querySelectorAll(".pair-cell");
+        cells.forEach((cell, cIdx) => {
+            if (matrix[rIdx] && matrix[rIdx][cIdx] !== undefined) {
+                cell.value = matrix[rIdx][cIdx];
+            }
+        });
+    });
 }
