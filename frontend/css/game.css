@@ -1,0 +1,142 @@
+/* game.css — стили для страниц теории игр */
+
+.game-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.game-header h2 {
+    margin: 0 0 0.2rem;
+    color: var(--color-primary-darker);
+}
+
+.muted {
+    color: var(--color-text-light);
+    margin: 0;
+}
+
+.game-actions {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+}
+
+.grid {
+    display: grid;
+    gap: 1.2rem;
+}
+
+.two-cols {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.field input,
+.select-input {
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    border-radius: 10px;
+    border: 1px solid var(--color-border);
+    background: #fff;
+    font-size: 1rem;
+}
+
+.inline-inputs {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.inline-inputs input {
+    width: 90px;
+}
+
+.note {
+    background: var(--color-neutral);
+    padding: 0.7rem 0.9rem;
+    border-radius: 10px;
+    color: var(--color-text-light);
+    font-size: 0.95rem;
+}
+
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.toolbar-group {
+    display: flex;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+}
+
+.checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.table-wrap {
+    overflow-x: auto;
+    background: var(--color-card);
+    border-radius: 14px;
+    border: 1px solid var(--color-border);
+    padding: 1rem;
+}
+
+.game-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 520px;
+}
+
+.game-table th,
+.game-table td {
+    border: 1px solid var(--color-border);
+    padding: 0.7rem;
+    text-align: center;
+}
+
+.game-table th {
+    background: var(--color-neutral);
+    font-weight: 600;
+}
+
+.game-table input {
+    width: 100%;
+    border: 1px solid var(--color-neutral-dark);
+    border-radius: 8px;
+    padding: 0.5rem;
+    font-size: 0.95rem;
+    text-align: center;
+}
+
+.footer-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.status {
+    color: var(--color-text-light);
+    font-weight: 500;
+}

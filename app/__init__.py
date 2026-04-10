@@ -42,6 +42,14 @@ def create_app(test_config=None):
     def input_page():
         return send_from_directory(frontend_dir, "input.html")
 
+    @app.route("/pair-game")
+    def pair_game_page():
+        return send_from_directory(frontend_dir, "pair_game.html")
+
+    @app.route("/nature-game")
+    def nature_game_page():
+        return send_from_directory(frontend_dir, "nature_game.html")
+
     @app.route("/report")
     def report_page():
         return send_from_directory(frontend_dir, "report.html")

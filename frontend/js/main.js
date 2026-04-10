@@ -46,6 +46,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         card.style.cursor = "pointer";
         card.addEventListener("click", () => {
+            if (method.id === "pair_games") {
+                window.location.href = "/pair-game";
+                return;
+            }
+            if (method.id === "nature_games") {
+                window.location.href = "/nature-game";
+                return;
+            }
             save("algorithm_id", method.id);
             console.log(`Выбран метод: ${method.id} → сохраняем в localStorage`);
             window.location.href = "/input";

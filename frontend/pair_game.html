@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ТПР — Парная игра</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/input.css">
+  <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/common.js"></script>
+  <script src="js/pair_game.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>Парная игра</h1>
+    <p class="subtitle">Ввод данных и расчет оптимальных стратегий</p>
+  </header>
+
+  <main>
+    <div class="page-nav">
+      <button onclick="goHome()" class="nav-btn">Главная</button>
+      <button onclick="goHistory()" class="nav-btn">История</button>
+    </div>
+
+    <section class="form-inner game-card" id="pair-game-form">
+      <div class="game-header">
+        <div>
+          <h2>Общее правило</h2>
+          <p class="muted">Матрица выигрышей Игрока 1 и стратегии двух игроков.</p>
+        </div>
+        <div class="game-actions">
+          <select id="pair-example-select" class="select-input"></select>
+          <button id="pair-example-btn" class="secondary-btn">Загрузить пример</button>
+        </div>
+      </div>
+
+      <div class="grid two-cols">
+        <div class="field">
+          <label>Название Игрока 1</label>
+          <input type="text" id="player1-name" placeholder="Игрок 1">
+        </div>
+        <div class="field">
+          <label>Название Игрока 2</label>
+          <input type="text" id="player2-name" placeholder="Игрок 2">
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <button id="add-row" class="secondary-btn">+ Строка</button>
+          <button id="remove-row" class="secondary-btn">− Строка</button>
+          <button id="add-col" class="secondary-btn">+ Столбец</button>
+          <button id="remove-col" class="secondary-btn">− Столбец</button>
+        </div>
+        <label class="checkbox">
+          <input type="checkbox" id="zero-sum">
+          Игра с нулевой суммой
+        </label>
+      </div>
+
+      <div class="table-wrap" id="pair-matrix-wrap"></div>
+
+      <div class="footer-actions">
+        <button id="pair-submit" class="primary-btn">Рассчитать</button>
+        <span id="pair-status" class="status"></span>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
