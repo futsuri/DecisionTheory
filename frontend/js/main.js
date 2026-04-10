@@ -12,7 +12,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // Показываем индикатор загрузки
-    // Показываем лоадер (можно оставить)
     showLoading("methods-container", "Загрузка методов...");
 
     // Вместо загрузки из JSON — сразу задаём список методов
@@ -28,8 +27,20 @@ document.addEventListener("DOMContentLoaded", async () => {
             name: "Многокритериальная оптимизация",
             description: "Непрерывные данные и функции полезности для критериев.",
             available: true
+        },
+        {
+            id: "pair_games",
+            name: "Парные игры",
+            description: "Анализ двухсторонних матричных игр, поиск равновесий и оптимальных стратегий.",
+            available: true
+        },
+        {
+            id: "nature_games",
+            name: "Игры с природой",
+            description: "Принятие решений в условиях неопределённости (критерии Вальда, Лапласа, Гурвица и др.).",
+            available: true
         }
-        // Если захочешь третий метод позже — просто добавь сюда ещё один объект
+        // Добавляй новые методы сюда — они автоматически появятся на странице
     ];
 
     // Убираем лоадер
@@ -41,7 +52,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
-    // Создаём карточки (улучшенная версия без ID и с описанием)
+    // Создаём карточки
     methods.filter(method => method.available !== false).forEach(method => {
         const card = document.createElement("div");
         card.classList.add("method-card");

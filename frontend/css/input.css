@@ -440,3 +440,62 @@ h5.section-title {
     margin-top: 2.5rem;
     text-align: center; /* если нужно центрировать */
 }
+
+.pair-game-table {
+    border-collapse: collapse;
+    margin: 1.5rem auto;
+    font-size: 1.05rem;
+}
+
+.pair-game-table th,
+.pair-game-table td {
+    border: 1px solid var(--color-border);
+    padding: 0.8rem 1rem;
+    text-align: center;
+}
+
+.pair-game-table th {
+    background: var(--color-neutral);
+    font-weight: 600;
+}
+
+.pair-cell {
+    width: 85px;
+    text-align: center;
+    padding: 0.6rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 1.05rem;
+}
+
+.pair-cell:focus {
+    border-color: var(--color-primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+}
+
+.criterion-item {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 1.2rem;
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.criterion-item:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 12px rgba(37,99,235,0.08);
+}
+
+.criterion-item input[type="checkbox"] {
+    margin-right: 10px;
+    transform: scale(1.2);
+}
+
+.criterion-item strong {
+    color: var(--color-primary-darker);
+    margin-bottom: 6px;
+}

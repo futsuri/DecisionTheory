@@ -116,10 +116,21 @@ footer #mode-display:hover {
 }
 
 /* Карточки методов */
+/* Карточки методов — обновлённый вариант */
 .methods-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
     gap: 1.8rem;
+    justify-content: center;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+/* Специально для 4 карточек — делаем последнюю по центру */
+.methods-grid:has(.method-card:nth-child(4)) .method-card:nth-child(4) {
+    grid-column: 1 / -1;           /* растягиваем на всю ширину */
+    justify-self: center;          /* центрируем карточку */
+    max-width: 340px;              /* возвращаем нормальную ширину карточки */
 }
 
 .method-card {
