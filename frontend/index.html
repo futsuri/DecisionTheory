@@ -24,25 +24,46 @@
 
   <main>
     <!-- Вставьте это внутрь тега <main> перед <div id="methods-container"> -->
-    <section class="task-selector">
-        <h2 class="task-title">Какую задачу вы решаете?</h2>
-        <div class="task-grid">
-            <div class="task-card" onclick="focusMethod('selection')">
-                <div class="task-icon">⚖️</div>
-                <h3>Выбор лучшего</h3>
-                <p>Нужно выбрать один вариант из многих по разным критериям.</p>
-            </div>
-            <div class="task-card" onclick="focusMethod('conflict')">
-                <div class="task-icon">⚔️</div>
-                <h3>Спор / Конкуренция</h3>
-                <p>Ваш успех зависит от действий другого игрока.</p>
-            </div>
-            <div class="task-card" onclick="focusMethod('risk')">
-                <div class="task-icon">🎲</div>
-                <h3>Риск и Неизвестность</h3>
-                <p>Принятие решения, когда внешние условия непредсказуемы.</p>
+    <section class="task-wizard-card">
+        <h2>Мастер подбора решения</h2>
+        <div class="wizard-step">
+            <label><strong>1. Опишите вашу задачу кратко:</strong></label>
+            <textarea id="task-text" placeholder="Например: Выбор площадки для нового завода или оценка рисков при запуске продукта..." class="wizard-input"></textarea>
+        </div>
+
+        <div class="wizard-step">
+            <label><strong>2. Уточните условия (выберите все подходящие):</strong></label>
+            <div class="check-grid">
+                <label class="check-item">
+                    <input type="checkbox" id="param-opponent">
+                    <span>Есть активный оппонент / конкурент</span>
+                </label>
+                <label class="check-item">
+                    <input type="checkbox" id="param-uncertainty">
+                    <span>Высокая неопределенность (погода, рынок)</span>
+                </label>
+                <label class="check-item">
+                    <input type="checkbox" id="param-alternatives">
+                    <span>Нужно выбрать один вариант из готового списка</span>
+                </label>
+                <label class="check-item">
+                    <input type="checkbox" id="param-criteria">
+                    <span>Много противоречивых критериев (цена, качество, срок)</span>
+                </label>
+                <label class="check-item">
+                    <input type="checkbox" id="param-opinion">
+                    <span>Важно учесть мнение экспертов и их оценки</span>
+                </label>
+                <label class="check-item">
+                    <input type="checkbox" id="param-math">
+                    <span>Есть готовые математические функции выгоды</span>
+                </label>
             </div>
         </div>
+
+        <button onclick="analyzeTaskAndRedirect()" class="nav-btn" style="width: 100%;">
+            Подобрать оптимальный метод
+        </button>
     </section>
 
     <div class="separator">
