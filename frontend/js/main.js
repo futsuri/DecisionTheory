@@ -62,3 +62,53 @@ document.addEventListener("DOMContentLoaded", async () => {
         container.appendChild(card);
     });
 });
+
+// Добавьте эту функцию в конец файла js/main.js
+
+function focusMethod(taskType) {
+    // Карта соответствия задач и методов
+    const taskMapping = {
+        'selection': ['ahp', 'multi_criteria'], // Для выбора лучшего
+        'conflict': ['pair_games'],            // Для конкуренции
+        'risk': ['nature_games']               // Для игр с природой
+    };
+
+    const targetMethods = taskMapping[taskType];
+    const allCards = document.querySelectorAll('.method-card');
+
+    // Снимаем выделение со всех
+    allCards.forEach(card => {
+        card.style.border = "none";
+        card.style.opacity = "0.5";
+        card.style.transform = "scale(0.95)";
+    });
+
+    // Подсвечиваем нужные
+    let firstFound = null;
+    allCards.forEach(card => {
+        // Ищем ID метода. В коде main.js мы можем добавить data-id при создании
+        const methodTitle = card.querySelector('h3').innerText.toLowerCase();
+
+        const isMatch = targetMethods.some(id =>
+            methodTitle.includes(id) ||
+            (id === 'ahp' && methodTitle.includes('иерархий')) ||
+            (id === 'multi_criteria' && methodTitle.includes('многокритериальная')) ||
+            (id === 'pair_games' && methodTitle.includes('парные')) ||
+            (id === 'nature_games' && methodTitle.includes('природой'))
+        );
+
+        if (isMatch) {
+            card.style.opacity = "1";
+            card.style.transform = "scale(1.05)";
+            card.style.border = "2px solid #3b82f6";
+            card.style.boxShadow = "0 10px 15px -3px rgba(59, 130, 246, 0.2)";
+            if (!firstFound) firstFound = card;
+        }
+    });
+
+    // Плавный скролл к первому подходящему методу
+    if (firstFound) {
+        firstFound.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+

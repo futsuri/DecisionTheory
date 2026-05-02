@@ -23,6 +23,31 @@
   </header>
 
   <main>
+    <!-- Вставьте это внутрь тега <main> перед <div id="methods-container"> -->
+    <section class="task-selector">
+        <h2 class="task-title">Какую задачу вы решаете?</h2>
+        <div class="task-grid">
+            <div class="task-card" onclick="focusMethod('selection')">
+                <div class="task-icon">⚖️</div>
+                <h3>Выбор лучшего</h3>
+                <p>Нужно выбрать один вариант из многих по разным критериям.</p>
+            </div>
+            <div class="task-card" onclick="focusMethod('conflict')">
+                <div class="task-icon">⚔️</div>
+                <h3>Спор / Конкуренция</h3>
+                <p>Ваш успех зависит от действий другого игрока.</p>
+            </div>
+            <div class="task-card" onclick="focusMethod('risk')">
+                <div class="task-icon">🎲</div>
+                <h3>Риск и Неизвестность</h3>
+                <p>Принятие решения, когда внешние условия непредсказуемы.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="separator">
+        <span>Или выберите метод вручную</span>
+    </div>
     <div id="methods-container" class="methods-grid">
       <!-- заполнит JS -->
     </div>

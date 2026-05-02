@@ -203,3 +203,90 @@ footer #mode-display:hover {
 .nav-btn:active {
     transform: translateY(0);
 }
+
+/* ===== Стили для блока задач (задача-ориентированный подход) ===== */
+.task-selector {
+    margin-bottom: 3.5rem;
+}
+
+.task-title {
+    text-align: center;
+    color: var(--color-primary-darker); /* используем ваш основной темный цвет */
+    margin-bottom: 2rem;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.task-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.8rem;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+/* Стилизуем карточки задач под ваш стиль .method-card */
+.task-card {
+    background: var(--color-card);
+    border-radius: 20px; /* чуть более скругленные, чтобы выделить */
+    padding: 2.2rem 1.8rem;
+    box-shadow: var(--shadow-md);
+    transition: all 0.25s ease;
+    cursor: pointer;
+    text-align: center;
+    border: 2px solid transparent; /* резерв под подсветку */
+}
+
+.task-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 20px 40px rgba(37, 99, 235, 0.12);
+    border-color: var(--color-primary); /* подсветка вашим синим */
+}
+
+.task-icon {
+    font-size: 2.8rem;
+    margin-bottom: 1.2rem;
+    display: block;
+}
+
+.task-card h3 {
+    margin: 0 0 0.8rem;
+    color: var(--color-primary-darker);
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.task-card p {
+    color: var(--color-text-light);
+    font-size: 1rem;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Разделитель в стиле вашего footer */
+.separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 4rem 0;
+    color: var(--color-text-light);
+    font-size: 0.95rem;
+}
+
+.separator::before,
+.separator::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.separator span {
+    padding: 0 1.5rem;
+}
+
+/* Эффект подсветки для методов */
+.method-highlight {
+    border: 2px solid var(--color-primary) !important;
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.2) !important;
+    transform: scale(1.03);
+}
