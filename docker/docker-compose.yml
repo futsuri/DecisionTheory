@@ -18,7 +18,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: ["gunicorn", "-b", "0.0.0.0:8000", "-w", "2", "--timeout", "120", "--reload", "run:app"]
+    command: ["gunicorn", "-b", "0.0.0.0:8000", "-w", "2", "--preload", "--timeout", "120", "--reload", "run:app"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
