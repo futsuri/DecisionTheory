@@ -16,13 +16,57 @@
     <h1>Теория Принятия Решений</h1>
     <p class="subtitle">Выберите метод для расчёта</p>
     <nav class="header-nav">
-      <button onclick="window.location.href='/pair-game'" class="nav-btn">Парная игра</button>
-      <button onclick="window.location.href='/nature-game'" class="nav-btn">Игра с природой</button>
       <button onclick="goHistory()" class="nav-btn">История</button>
     </nav>
   </header>
 
   <main>
+    <!-- Вставьте это внутрь тега <main> перед <div id="methods-container"> -->
+    <section class="task-wizard-card">
+        <h2>Мастер подбора решения</h2>
+        <div class="wizard-step">
+            <label><strong>1. Опишите вашу задачу кратко:</strong></label>
+            <textarea id="task-text" placeholder="Например: Выбор площадки для нового завода или оценка рисков при запуске продукта..." class="wizard-input"></textarea>
+        </div>
+
+        <div class="wizard-step">
+            <label><strong>2. Уточните условия (выберите все подходящие):</strong></label>
+            <div class="check-grid">
+                <label class="check-item">
+                    <input type="checkbox" id="param-opponent">
+                    <span>Есть активный оппонент / конкурент</span>
+                </label>
+                <label class="check-item">
+                    <input type="checkbox" id="param-uncertainty">
+                    <span>Высокая неопределенность (погода, рынок)</span>
+                </label>
+                <label class="check-item">
+                    <input type="checkbox" id="param-alternatives">
+                    <span>Нужно выбрать один вариант из готового списка</span>
+                </label>
+                <label class="check-item">
+                    <input type="checkbox" id="param-criteria">
+                    <span>Много противоречивых критериев (цена, качество, срок)</span>
+                </label>
+                <label class="check-item">
+                    <input type="checkbox" id="param-opinion">
+                    <span>Важно учесть мнение экспертов и их оценки</span>
+                </label>
+                <label class="check-item">
+                    <input type="checkbox" id="param-math">
+                    <span>Есть готовые математические функции выгоды</span>
+                </label>
+            </div>
+        </div>
+
+        <button onclick="analyzeTaskAndRedirect()" class="nav-btn" style="width: 100%;">
+            Подобрать оптимальный метод
+        </button>
+    </section>
+
+    <div class="separator">
+        <span>Или выберите метод вручную</span>
+    </div>
     <div id="methods-container" class="methods-grid">
       <!-- заполнит JS -->
     </div>
