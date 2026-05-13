@@ -281,6 +281,11 @@ def _normalize_pair_games_input(input_data):
     player1_name = input_data.get("player1_name") or "Игрок 1"
     player2_name = input_data.get("player2_name") or "Игрок 2"
     matrix = input_data.get("payoff_matrix") or []
+    matrix2 = (
+        input_data.get("player2_payoff_matrix")
+        or input_data.get("payoff_matrix_player2")
+        or input_data.get("payoff_matrix_2")
+    )
 
     row_count = len(matrix) if isinstance(matrix, list) else 0
     col_count = len(matrix[0]) if row_count and isinstance(matrix[0], list) else 0
@@ -305,7 +310,7 @@ def _normalize_pair_games_input(input_data):
                 sanitized_row.append(0.0)
         sanitized_matrix.append(sanitized_row)
 
-    return {
+    normalized = {
         "player1_name": str(player1_name),
         "player2_name": str(player2_name),
         "player1_strategies": [str(x) for x in player1_strategies],
@@ -313,6 +318,21 @@ def _normalize_pair_games_input(input_data):
         "payoff_matrix": sanitized_matrix,
         "is_zero_sum": bool(input_data.get("is_zero_sum", True)),
     }
+    if matrix2 is not None:
+        sanitized_matrix2 = []
+        for row in matrix2 if isinstance(matrix2, list) else []:
+            if not isinstance(row, list):
+                continue
+            sanitized_row = []
+            for value in row:
+                try:
+                    sanitized_row.append(float(value))
+                except (TypeError, ValueError):
+                    sanitized_row.append(0.0)
+            sanitized_matrix2.append(sanitized_row)
+        normalized["player2_payoff_matrix"] = sanitized_matrix2
+
+    return normalized
 
 
 def _normalize_nature_games_input(input_data):
@@ -632,6 +652,13 @@ def _validate_pair_games_deep(payload):
 
     if any(not isinstance(row, list) or len(row) != cols for row in matrix):
         raise ValueError("PairGames: 'payoff_matrix' должна быть прямоугольной матрицей")
+
+    matrix2 = payload.get("player2_payoff_matrix")
+    if matrix2 is not None:
+        if not isinstance(matrix2, list) or len(matrix2) != rows:
+            raise ValueError("PairGames: 'player2_payoff_matrix' должна иметь тот же размер, что и payoff_matrix")
+        if any(not isinstance(row, list) or len(row) != cols for row in matrix2):
+            raise ValueError("PairGames: 'player2_payoff_matrix' должна иметь тот же размер, что и payoff_matrix")
 
     strategies1 = payload.get("player1_strategies") or []
     strategies2 = payload.get("player2_strategies") or []

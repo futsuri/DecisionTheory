@@ -1,16 +1,18 @@
 """
-Two-player zero-sum matrix game.
+Two-player matrix games.
 
 Features:
 - dominance reduction (strict)
 - saddle point check (maximin == minimax)
 - mixed strategies via linear programming (scipy.optimize.linprog)
 - 2x2 analytic solution when possible
+- optional bimatrix general-sum Nash equilibria via support enumeration
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import combinations
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -39,6 +41,30 @@ def run_algorithm(input_data: Dict[str, Any]) -> Dict[str, Any]:
         row_names = parsed["player1_strategies"]
         col_names = parsed["player2_strategies"]
 
+        if not parsed["is_zero_sum"]:
+            result = _solve_general_sum_game(parsed)
+            report_data = {
+                "player1_name": parsed["player1_name"],
+                "player2_name": parsed["player2_name"],
+                "player1_strategies": parsed["player1_strategies"],
+                "player2_strategies": parsed["player2_strategies"],
+                "payoff_matrix": parsed["payoff_matrix"].tolist(),
+                "player2_payoff_matrix": (
+                    parsed["player2_payoff_matrix"].tolist()
+                    if parsed["player2_payoff_matrix"] is not None
+                    else None
+                ),
+                "is_zero_sum": parsed["is_zero_sum"],
+                "equilibria": result["equilibria"],
+                "recommendation": result["recommendation"],
+            }
+            return {
+                "status": "success",
+                "result": result,
+                "metadata": metadata,
+                "report_data": report_data,
+            }
+
         reduced = _reduce_by_dominance(matrix, row_names, col_names)
         red_matrix = reduced["matrix"]
         red_rows = reduced["row_names"]
@@ -47,12 +73,20 @@ def run_algorithm(input_data: Dict[str, Any]) -> Dict[str, Any]:
         saddle = _find_saddle_point(red_matrix, red_rows, red_cols)
 
         if saddle["exists"]:
+            strategy_probabilities = _pure_strategy_probabilities(
+                row_names,
+                col_names,
+                saddle["player1_strategies"],
+                saddle["player2_strategies"],
+            )
             result = {
                 "is_zero_sum": parsed["is_zero_sum"],
+                "game_type": "zero_sum",
                 "reduction": reduced["reduction"],
                 "reduced_matrix": red_matrix.tolist(),
                 "saddle_point": saddle,
                 "mixed_strategies": None,
+                "strategy_probabilities": strategy_probabilities,
                 "value": float(saddle["value"]),
                 "optimal_strategies": {
                     "player1": saddle["player1_strategies"],
@@ -61,12 +95,19 @@ def run_algorithm(input_data: Dict[str, Any]) -> Dict[str, Any]:
             }
         else:
             mixed = _solve_mixed_strategies(red_matrix, red_rows, red_cols)
+            strategy_probabilities = _expand_mixed_probabilities(
+                mixed,
+                row_names,
+                col_names,
+            )
             result = {
                 "is_zero_sum": parsed["is_zero_sum"],
+                "game_type": "zero_sum",
                 "reduction": reduced["reduction"],
                 "reduced_matrix": red_matrix.tolist(),
                 "saddle_point": saddle,
                 "mixed_strategies": mixed,
+                "strategy_probabilities": strategy_probabilities,
                 "value": float(mixed["value"]),
                 "optimal_strategies": {
                     "player1": mixed["player1"],
@@ -74,15 +115,20 @@ def run_algorithm(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 },
             }
 
+        result["recommendation"] = _build_zero_sum_recommendation(result)
+
         report_data = {
             "player1_name": parsed["player1_name"],
             "player2_name": parsed["player2_name"],
             "player1_strategies": parsed["player1_strategies"],
             "player2_strategies": parsed["player2_strategies"],
             "payoff_matrix": parsed["payoff_matrix"].tolist(),
+            "is_zero_sum": parsed["is_zero_sum"],
             "reduction": reduced["reduction"],
             "saddle_point": result["saddle_point"],
             "mixed_strategies": result["mixed_strategies"],
+            "strategy_probabilities": result["strategy_probabilities"],
+            "recommendation": result["recommendation"],
             "value": result["value"],
         }
 
@@ -107,6 +153,11 @@ def _parse_and_validate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     row_names = input_data.get("player1_strategies", [])
     col_names = input_data.get("player2_strategies", [])
     matrix = input_data.get("payoff_matrix", [])
+    matrix2 = (
+        input_data.get("player2_payoff_matrix")
+        or input_data.get("payoff_matrix_player2")
+        or input_data.get("payoff_matrix_2")
+    )
     is_zero_sum = bool(input_data.get("is_zero_sum", True))
 
     if not isinstance(row_names, list) or not row_names:
@@ -122,12 +173,21 @@ def _parse_and_validate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     if len(matrix) != m or any(not isinstance(row, list) or len(row) != n for row in matrix):
         raise ValueError(f"'payoff_matrix' must be {m}x{n}")
 
+    player2_payoff = None
+    if matrix2 is not None:
+        if not isinstance(matrix2, list) or len(matrix2) != m:
+            raise ValueError(f"'player2_payoff_matrix' must be {m}x{n}")
+        if any(not isinstance(row, list) or len(row) != n for row in matrix2):
+            raise ValueError(f"'player2_payoff_matrix' must be {m}x{n}")
+        player2_payoff = np.array(matrix2, dtype=float)
+
     return {
         "player1_name": player1_name,
         "player2_name": player2_name,
         "player1_strategies": [str(x) for x in row_names],
         "player2_strategies": [str(x) for x in col_names],
         "payoff_matrix": np.array(matrix, dtype=float),
+        "player2_payoff_matrix": player2_payoff,
         "is_zero_sum": is_zero_sum,
     }
 
@@ -396,3 +456,344 @@ def _lp_player2(matrix: np.ndarray) -> Tuple[Optional[np.ndarray], Optional[floa
     q = np.array(res.x[:-1], dtype=float)
     v = float(res.x[-1])
     return q, v
+
+
+def _pure_strategy_probabilities(
+    row_names: List[str],
+    col_names: List[str],
+    p1_optimal: List[str],
+    p2_optimal: List[str],
+) -> Dict[str, Any]:
+    p1_set = set(p1_optimal)
+    p2_set = set(p2_optimal)
+    p1_share = 1.0 / len(p1_set) if p1_set else 0.0
+    p2_share = 1.0 / len(p2_set) if p2_set else 0.0
+
+    return {
+        "player1": {
+            "strategies": row_names,
+            "probabilities": [p1_share if name in p1_set else 0.0 for name in row_names],
+        },
+        "player2": {
+            "strategies": col_names,
+            "probabilities": [p2_share if name in p2_set else 0.0 for name in col_names],
+        },
+        "note": (
+            "Показана чистая оптимальная стратегия. Если седловых стратегий несколько, "
+            "вероятности распределены поровну между равнозначными чистыми оптимумами."
+        ),
+    }
+
+
+def _expand_mixed_probabilities(
+    mixed: Dict[str, Any],
+    row_names: List[str],
+    col_names: List[str],
+) -> Dict[str, Any]:
+    p1_probs = {name: prob for name, prob in zip(
+        mixed.get("player1", {}).get("strategies", []),
+        mixed.get("player1", {}).get("probabilities", []),
+    )}
+    p2_probs = {name: prob for name, prob in zip(
+        mixed.get("player2", {}).get("strategies", []),
+        mixed.get("player2", {}).get("probabilities", []),
+    )}
+
+    return {
+        "player1": {
+            "strategies": row_names,
+            "probabilities": [float(p1_probs.get(name, 0.0)) for name in row_names],
+        },
+        "player2": {
+            "strategies": col_names,
+            "probabilities": [float(p2_probs.get(name, 0.0)) for name in col_names],
+        },
+        "note": "Доминируемые стратегии получают вероятность 0 в полном профиле исходных стратегий.",
+    }
+
+
+def _build_zero_sum_recommendation(result: Dict[str, Any], tol: float = 1e-9) -> Dict[str, Any]:
+    value = result.get("value")
+    if result.get("saddle_point", {}).get("exists"):
+        p1 = result["strategy_probabilities"]["player1"]
+        p2 = result["strategy_probabilities"]["player2"]
+        p1_active = _active_strategy_names(p1, tol)
+        p2_active = _active_strategy_names(p2, tol)
+        return {
+            "type": "pure",
+            "summary": (
+                f"Игроку 1 стоит использовать чистую оптимальную стратегию: {', '.join(p1_active)}. "
+                f"Оптимальный ответ игрока 2: {', '.join(p2_active)}."
+            ),
+            "player1_best": p1_active,
+            "player2_best": p2_active,
+            "value": value,
+            "reason": (
+                "Седловая точка существует, поэтому ни один игрок не улучшит гарантированный "
+                "результат односторонним отклонением от рекомендованной чистой стратегии."
+            ),
+        }
+
+    p1 = result["strategy_probabilities"]["player1"]
+    p2 = result["strategy_probabilities"]["player2"]
+    return {
+        "type": "mixed",
+        "summary": (
+            "Используйте смешанный профиль из таблицы вероятностей: отдельные чистые "
+            "стратегии в этой игре уязвимы."
+        ),
+        "player1_best": _active_strategy_names(p1, tol),
+        "player2_best": _active_strategy_names(p2, tol),
+        "value": value,
+        "reason": (
+            "Седловой точки нет. Оптимальное распределение уравнивает лучшие ответы "
+            "соперника и гарантирует цену игры."
+        ),
+    }
+
+
+def _active_strategy_names(profile: Dict[str, Any], tol: float = 1e-9) -> List[str]:
+    names = profile.get("strategies", [])
+    probs = profile.get("probabilities", [])
+    return [name for name, prob in zip(names, probs) if float(prob) > tol]
+
+
+def _solve_general_sum_game(parsed: Dict[str, Any]) -> Dict[str, Any]:
+    matrix_a = parsed["payoff_matrix"]
+    matrix_b = parsed["player2_payoff_matrix"]
+    notes = []
+    if matrix_b is None:
+        matrix_b = -matrix_a
+        notes.append(
+            "Матрица выигрышей игрока 2 не передана; для игрока 2 игра интерпретирована как нулевая сумма."
+        )
+
+    equilibria = _find_bimatrix_equilibria(
+        matrix_a,
+        matrix_b,
+        parsed["player1_strategies"],
+        parsed["player2_strategies"],
+    )
+    recommendation = _build_general_sum_recommendation(equilibria)
+
+    return {
+        "is_zero_sum": False,
+        "game_type": "general_sum",
+        "payoff_matrix": matrix_a.tolist(),
+        "player2_payoff_matrix": matrix_b.tolist(),
+        "equilibria": equilibria,
+        "strategy_probabilities": equilibria[0]["strategy_probabilities"] if equilibria else None,
+        "recommendation": recommendation,
+        "notes": notes,
+    }
+
+
+def _find_bimatrix_equilibria(
+    matrix_a: np.ndarray,
+    matrix_b: np.ndarray,
+    row_names: List[str],
+    col_names: List[str],
+    tol: float = 1e-8,
+) -> List[Dict[str, Any]]:
+    m, n = matrix_a.shape
+    equilibria: List[Dict[str, Any]] = []
+
+    for i in range(m):
+        for j in range(n):
+            if _is_pure_nash(matrix_a, matrix_b, i, j, tol):
+                p = np.zeros(m)
+                q = np.zeros(n)
+                p[i] = 1.0
+                q[j] = 1.0
+                equilibria.append(_make_bimatrix_equilibrium(
+                    "pure",
+                    p,
+                    q,
+                    matrix_a,
+                    matrix_b,
+                    row_names,
+                    col_names,
+                ))
+
+    for support_size in range(2, min(m, n) + 1):
+        for rows in combinations(range(m), support_size):
+            for cols in combinations(range(n), support_size):
+                equilibrium = _solve_support_equilibrium(
+                    matrix_a,
+                    matrix_b,
+                    list(rows),
+                    list(cols),
+                    row_names,
+                    col_names,
+                    tol,
+                )
+                if equilibrium is not None:
+                    equilibria.append(equilibrium)
+
+    return _deduplicate_equilibria(equilibria)
+
+
+def _is_pure_nash(
+    matrix_a: np.ndarray,
+    matrix_b: np.ndarray,
+    row: int,
+    col: int,
+    tol: float,
+) -> bool:
+    p1_payoff = matrix_a[row, col]
+    p2_payoff = matrix_b[row, col]
+    return (
+        p1_payoff >= matrix_a[:, col].max() - tol
+        and p2_payoff >= matrix_b[row, :].max() - tol
+    )
+
+
+def _solve_support_equilibrium(
+    matrix_a: np.ndarray,
+    matrix_b: np.ndarray,
+    rows: List[int],
+    cols: List[int],
+    row_names: List[str],
+    col_names: List[str],
+    tol: float,
+) -> Optional[Dict[str, Any]]:
+    try:
+        sub_a = matrix_a[np.ix_(rows, cols)]
+        left_a = np.block([
+            [sub_a, -np.ones((len(rows), 1))],
+            [np.ones((1, len(cols))), np.zeros((1, 1))],
+        ])
+        right_a = np.array([0.0] * len(rows) + [1.0])
+        solved_q = np.linalg.solve(left_a, right_a)
+
+        sub_b = matrix_b[np.ix_(rows, cols)]
+        left_b = np.block([
+            [sub_b.T, -np.ones((len(cols), 1))],
+            [np.ones((1, len(rows))), np.zeros((1, 1))],
+        ])
+        right_b = np.array([0.0] * len(cols) + [1.0])
+        solved_p = np.linalg.solve(left_b, right_b)
+    except np.linalg.LinAlgError:
+        return None
+
+    q_support = solved_q[:-1]
+    p_support = solved_p[:-1]
+
+    if np.any(q_support < -tol) or np.any(p_support < -tol):
+        return None
+
+    q_support = np.maximum(q_support, 0.0)
+    p_support = np.maximum(p_support, 0.0)
+    if q_support.sum() <= tol or p_support.sum() <= tol:
+        return None
+    q_support = q_support / q_support.sum()
+    p_support = p_support / p_support.sum()
+
+    p = np.zeros(matrix_a.shape[0])
+    q = np.zeros(matrix_a.shape[1])
+    for idx, row in enumerate(rows):
+        p[row] = p_support[idx]
+    for idx, col in enumerate(cols):
+        q[col] = q_support[idx]
+
+    p1_payoffs = matrix_a.dot(q)
+    p2_payoffs = p.dot(matrix_b)
+    value1 = float(p.dot(matrix_a).dot(q))
+    value2 = float(p.dot(matrix_b).dot(q))
+
+    if any(p1_payoffs[i] > value1 + tol for i in range(matrix_a.shape[0]) if i not in rows):
+        return None
+    if any(p2_payoffs[j] > value2 + tol for j in range(matrix_a.shape[1]) if j not in cols):
+        return None
+
+    return _make_bimatrix_equilibrium(
+        "mixed",
+        p,
+        q,
+        matrix_a,
+        matrix_b,
+        row_names,
+        col_names,
+    )
+
+
+def _make_bimatrix_equilibrium(
+    equilibrium_type: str,
+    p: np.ndarray,
+    q: np.ndarray,
+    matrix_a: np.ndarray,
+    matrix_b: np.ndarray,
+    row_names: List[str],
+    col_names: List[str],
+) -> Dict[str, Any]:
+    value1 = float(p.dot(matrix_a).dot(q))
+    value2 = float(p.dot(matrix_b).dot(q))
+    profile = {
+        "player1": {
+            "strategies": row_names,
+            "probabilities": [float(x) for x in p],
+        },
+        "player2": {
+            "strategies": col_names,
+            "probabilities": [float(x) for x in q],
+        },
+    }
+    return {
+        "type": equilibrium_type,
+        "payoffs": {
+            "player1": value1,
+            "player2": value2,
+        },
+        "strategy_probabilities": profile,
+        "active_strategies": {
+            "player1": _active_strategy_names(profile["player1"]),
+            "player2": _active_strategy_names(profile["player2"]),
+        },
+    }
+
+
+def _deduplicate_equilibria(equilibria: List[Dict[str, Any]], precision: int = 8) -> List[Dict[str, Any]]:
+    seen = set()
+    unique = []
+    for equilibrium in equilibria:
+        profile = equilibrium["strategy_probabilities"]
+        key = (
+            tuple(round(x, precision) for x in profile["player1"]["probabilities"]),
+            tuple(round(x, precision) for x in profile["player2"]["probabilities"]),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(equilibrium)
+    return unique
+
+
+def _build_general_sum_recommendation(equilibria: List[Dict[str, Any]]) -> Dict[str, Any]:
+    if not equilibria:
+        return {
+            "type": "none",
+            "summary": "Доступный перебор носителей не нашел равновесие Нэша.",
+            "reason": (
+                "Для больших или вырожденных игр общей суммы может потребоваться внешний "
+                "решатель равновесий."
+            ),
+        }
+
+    pure = [eq for eq in equilibria if eq.get("type") == "pure"]
+    chosen = pure[0] if pure else equilibria[0]
+    p1 = chosen["active_strategies"]["player1"]
+    p2 = chosen["active_strategies"]["player2"]
+    return {
+        "type": chosen.get("type"),
+        "summary": (
+            f"Рекомендуемое равновесие Нэша: игрок 1 использует {', '.join(p1)}, "
+            f"игрок 2 использует {', '.join(p2)}."
+        ),
+        "player1_best": p1,
+        "player2_best": p2,
+        "payoffs": chosen.get("payoffs"),
+        "reason": (
+            "В этом профиле выбранная стратегия каждого игрока является лучшим ответом "
+            "на стратегию второго, поэтому одностороннее отклонение невыгодно."
+        ),
+    }

@@ -280,10 +280,15 @@ def _report_pair_games(run_id, payload, result):
     row_names = payload.get("player1_strategies", [])
     col_names = payload.get("player2_strategies", [])
     matrix = payload.get("payoff_matrix", [])
+    matrix2 = payload.get("player2_payoff_matrix")
+    is_zero_sum = result.get("is_zero_sum", payload.get("is_zero_sum", True))
 
     reduction = result.get("reduction", {})
     saddle = result.get("saddle_point", {})
     mixed = result.get("mixed_strategies")
+    equilibria = result.get("equilibria", [])
+    strategy_probabilities = result.get("strategy_probabilities")
+    recommendation = result.get("recommendation", {})
     value = result.get("value")
 
     markdown = [
@@ -295,10 +300,59 @@ def _report_pair_games(run_id, payload, result):
         "",
         f"**Игрок 1:** {player1_name}",
         f"**Игрок 2:** {player2_name}",
+        f"**Тип игры:** {'нулевая сумма' if is_zero_sum else 'общая сумма'}",
+        "",
+        "## Главный вывод",
+        _pair_game_conclusion(recommendation, value, is_zero_sum),
         "",
         "## Платёжная матрица",
         _build_md_matrix(row_names, col_names, matrix),
     ]
+
+    if not is_zero_sum:
+        if matrix2:
+            markdown.extend([
+                "",
+                f"## Матрица выигрышей игрока 2 ({player2_name})",
+                _build_md_matrix(row_names, col_names, matrix2),
+            ])
+        if equilibria:
+            markdown.extend([
+                "",
+                "## Равновесия Нэша",
+            ])
+            rows = []
+            for idx, equilibrium in enumerate(equilibria, start=1):
+                active = equilibrium.get("active_strategies", {})
+                payoffs = equilibrium.get("payoffs", {})
+                rows.append([
+                    idx,
+                    "чистое" if equilibrium.get("type") == "pure" else "смешанное",
+                    ", ".join(active.get("player1", [])),
+                    ", ".join(active.get("player2", [])),
+                    _fmt_float(payoffs.get("player1")),
+                    _fmt_float(payoffs.get("player2")),
+                ])
+            markdown.append(_build_md_table(
+                ["#", "Тип", "Игрок 1", "Игрок 2", "Выигрыш 1", "Выигрыш 2"],
+                rows,
+            ))
+        if strategy_probabilities:
+            markdown.extend(_render_probability_profile(
+                "Рекомендуемый профиль вероятностей",
+                strategy_probabilities,
+                player1_name,
+                player2_name,
+            ))
+        if result.get("notes"):
+            markdown.append("")
+            for note in result.get("notes", []):
+                markdown.append(f"> {note}")
+        return {
+            "run_id": run_id,
+            "algorithm_id": "pair_games",
+            "markdown": "\n".join(markdown),
+        }
 
     steps = reduction.get("steps", [])
     if steps:
@@ -355,6 +409,14 @@ def _report_pair_games(run_id, payload, result):
                 rows.append([name, _fmt_float(prob)])
             markdown.append(_build_md_table(["Стратегия", "Вероятность"], rows))
 
+    if strategy_probabilities:
+        markdown.extend(_render_probability_profile(
+            "Итоговые вероятности по всем исходным стратегиям",
+            strategy_probabilities,
+            player1_name,
+            player2_name,
+        ))
+
     return {
         "run_id": run_id,
         "algorithm_id": "pair_games",
@@ -373,6 +435,9 @@ def _report_nature_games(run_id, payload, result):
     risk_matrix = result.get("risk_matrix", [])
     criteria = result.get("criteria", {})
     comparison = result.get("comparison_table", [])
+    probabilities = result.get("probabilities")
+    recommendation = result.get("recommendation", {})
+    hurwicz_interpretation = result.get("hurwicz_interpretation", {})
     notes = result.get("notes", [])
 
     markdown = [
@@ -391,9 +456,38 @@ def _report_nature_games(run_id, payload, result):
 
     markdown.extend([
         "",
+        "## Главный вывод",
+        _nature_game_conclusion(recommendation),
+    ])
+
+    if hurwicz_interpretation:
+        markdown.extend([
+            "",
+            "## Интерпретация коэффициента Гурвица",
+            (
+                f"λ = {_fmt_float(hurwicz_interpretation.get('lambda'))}: "
+                f"вес осторожности {_fmt_float(hurwicz_interpretation.get('pessimism_weight'))}, "
+                f"вес оптимизма {_fmt_float(hurwicz_interpretation.get('optimism_weight'))}."
+            ),
+            _translate_hurwicz_text(hurwicz_interpretation.get("text", "")),
+        ])
+
+    markdown.extend([
+        "",
         "## Матрица выигрышей",
         _build_md_matrix(strategies, states, payoff_matrix),
     ])
+
+    if probabilities:
+        rows = []
+        for state, probability in zip(states, probabilities):
+            rows.append([state, _fmt_float(probability), f"{float(probability) * 100:.2f}%"])
+        markdown.extend([
+            "",
+            "## Вероятности состояний природы",
+            _build_md_table(["Состояние", "Вероятность", "Доля"], rows),
+            "Эти вероятности используются в критерии Байеса: он выбирает стратегию с максимальным математическим ожиданием.",
+        ])
 
     if risk_matrix:
         markdown.extend([
@@ -411,7 +505,21 @@ def _report_nature_games(run_id, payload, result):
             rec = ", ".join(block.get("recommended_strategies", []) or [])
             value = block.get("value")
             value_str = _fmt_float(value) if value is not None else "—"
-            markdown.append(f"- **{key.capitalize()}**: {rec or '—'} (значение: {value_str})")
+            markdown.append(
+                f"- **{_criterion_title(key)}**: {rec or '—'} "
+                f"(значение: {value_str}). {_criterion_report_reason(key)}"
+            )
+
+    if recommendation.get("details"):
+        markdown.append("")
+        markdown.append("## Почему этот вариант лучше")
+        for detail in recommendation.get("details", []):
+            if selected and detail.get("criterion") not in selected:
+                continue
+            markdown.append(
+                f"- **{_criterion_title(detail.get('criterion'))}:** "
+                f"{_translate_criterion_reason(detail.get('reason', ''))}"
+            )
 
     if comparison:
         markdown.append("")
@@ -851,6 +959,119 @@ def _fmt_float(value, precision=4):
         return f"{float(value):.{precision}f}"
     except (TypeError, ValueError):
         return str(value)
+
+
+def _pair_game_conclusion(recommendation, value, is_zero_sum):
+    if not recommendation:
+        return "Рекомендация не сформирована: проверьте входные данные и матрицы выигрышей."
+
+    p1 = recommendation.get("player1_best") or []
+    p2 = recommendation.get("player2_best") or []
+    if is_zero_sum:
+        if recommendation.get("type") == "pure":
+            return (
+                f"Игроку 1 лучше выбрать **{', '.join(p1)}**. "
+                f"Это седловая точка: при рациональной игре соперника гарантируется цена игры "
+                f"**{_fmt_float(value)}**, а одностороннее отклонение не улучшает результат."
+            )
+        return (
+            "Лучший выбор здесь не одна чистая стратегия, а **смешанная стратегия**. "
+            f"Активные стратегии игрока 1: **{', '.join(p1)}**; цена игры "
+            f"**{_fmt_float(value)}**. Вероятности ниже показывают, как именно смешивать варианты, "
+            "чтобы соперник не мог систематически воспользоваться предсказуемостью."
+        )
+
+    payoffs = recommendation.get("payoffs") or {}
+    return (
+        f"Рекомендуемое равновесие Нэша: игрок 1 использует **{', '.join(p1) or '—'}**, "
+        f"игрок 2 использует **{', '.join(p2) or '—'}**. Ожидаемые выигрыши: "
+        f"{_fmt_float(payoffs.get('player1'))} для игрока 1 и "
+        f"{_fmt_float(payoffs.get('player2'))} для игрока 2. В этой точке никому не выгодно "
+        "отклоняться в одиночку."
+    )
+
+
+def _render_probability_profile(title, profile, player1_name, player2_name):
+    lines = ["", f"## {title}"]
+    p1 = profile.get("player1", {})
+    p2 = profile.get("player2", {})
+
+    rows = []
+    for name, probability in zip(p1.get("strategies", []), p1.get("probabilities", [])):
+        rows.append([name, _fmt_float(probability), f"{float(probability) * 100:.2f}%"])
+    if rows:
+        lines.extend([
+            "",
+            f"### {player1_name}",
+            _build_md_table(["Стратегия", "Вероятность", "Доля"], rows),
+        ])
+
+    rows = []
+    for name, probability in zip(p2.get("strategies", []), p2.get("probabilities", [])):
+        rows.append([name, _fmt_float(probability), f"{float(probability) * 100:.2f}%"])
+    if rows:
+        lines.extend([
+            "",
+            f"### {player2_name}",
+            _build_md_table(["Стратегия", "Вероятность", "Доля"], rows),
+        ])
+
+    note = profile.get("note")
+    if note:
+        lines.append(f"> {note}")
+    return lines
+
+
+def _nature_game_conclusion(recommendation):
+    best = recommendation.get("best_strategy")
+    best_all = recommendation.get("best_strategies") or []
+    confidence = recommendation.get("confidence", 0.0)
+    criteria = recommendation.get("criteria_considered") or []
+
+    if not best:
+        return "Итоговый выбор не сформирован: нет доступных критериев с рекомендациями."
+    if len(best_all) > 1:
+        return (
+            "Лучшие варианты по совокупности критериев: **"
+            + ", ".join(best_all)
+            + f"**. Они набрали одинаковую поддержку; доля поддержки лидеров "
+            f"{confidence * 100:.1f}% от учтенных критериев ({len(criteria)} критериев)."
+        )
+    return (
+        f"Лучший вариант: **{best}**. Он получает наибольшую поддержку среди критериев "
+        f"({confidence * 100:.1f}% от учтенных критериев, всего критериев: {len(criteria)}). "
+        "Поэтому его стоит выбрать как наиболее устойчивый к неопределенности вариант."
+    )
+
+
+def _criterion_title(key):
+    titles = {
+        "wald": "Вальд",
+        "savage": "Сэвидж",
+        "hurwicz": "Гурвиц",
+        "laplace": "Лаплас",
+        "bayes": "Байес",
+    }
+    return titles.get(str(key), str(key).capitalize())
+
+
+def _criterion_report_reason(key):
+    reasons = {
+        "wald": "Критерий защищает от худшего сценария.",
+        "savage": "Критерий выбирает вариант с минимальным максимальным сожалением.",
+        "hurwicz": "Критерий взвешивает худший и лучший исходы через коэффициент Гурвица.",
+        "laplace": "Критерий считает состояния природы равновероятными.",
+        "bayes": "Критерий использует заданные вероятности состояний природы.",
+    }
+    return reasons.get(str(key), "")
+
+
+def _translate_hurwicz_text(text):
+    return text or "Коэффициент показывает, насколько сильно решение смещено к осторожности или оптимизму."
+
+
+def _translate_criterion_reason(text):
+    return text or "Критерий поддерживает указанную стратегию."
 
 
 def _build_ahp_intermediate(criteria, alternatives, matrix, alt_matrices):

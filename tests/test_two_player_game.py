@@ -32,3 +32,24 @@ def test_two_player_game_mixed():
     assert mixed is not None
     assert len(mixed["player1"]["probabilities"]) == 2
     assert len(mixed["player2"]["probabilities"]) == 2
+    full_profile = result["result"]["strategy_probabilities"]
+    assert full_profile["player1"]["probabilities"] == mixed["player1"]["probabilities"]
+    assert full_profile["player2"]["probabilities"] == mixed["player2"]["probabilities"]
+
+
+def test_two_player_general_sum_pure_equilibrium():
+    payload = {
+        "player1_name": "P1",
+        "player2_name": "P2",
+        "player1_strategies": ["Cooperate", "Defect"],
+        "player2_strategies": ["Cooperate", "Defect"],
+        "payoff_matrix": [[3, 0], [5, 1]],
+        "player2_payoff_matrix": [[3, 5], [0, 1]],
+        "is_zero_sum": False,
+    }
+    result = run_algorithm(payload)
+    assert result["status"] == "success"
+    assert result["result"]["game_type"] == "general_sum"
+    assert result["result"]["equilibria"]
+    assert result["result"]["recommendation"]["player1_best"] == ["Defect"]
+    assert result["result"]["recommendation"]["player2_best"] == ["Defect"]

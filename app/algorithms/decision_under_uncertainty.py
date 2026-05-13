@@ -36,6 +36,12 @@ def run_algorithm(input_data: Dict[str, Any]) -> Dict[str, Any]:
             probabilities=parsed["probabilities"],
         )
         comparison = _build_comparison_table(parsed["strategies"], criteria)
+        recommendation = _build_recommendation(
+            parsed["strategies"],
+            criteria,
+            parsed["selected_criteria"],
+        )
+        hurwicz_interpretation = _interpret_hurwicz(parsed["hurwicz_lambda"])
 
         result = {
             "decision_maker": parsed["decision_maker"],
@@ -46,6 +52,14 @@ def run_algorithm(input_data: Dict[str, Any]) -> Dict[str, Any]:
             "risk_matrix": risk.tolist(),
             "criteria": criteria,
             "comparison_table": comparison,
+            "probabilities": (
+                [float(x) for x in parsed["probabilities"]]
+                if parsed["probabilities"] is not None
+                else None
+            ),
+            "selected_criteria": parsed["selected_criteria"],
+            "hurwicz_interpretation": hurwicz_interpretation,
+            "recommendation": recommendation,
             "notes": parsed["notes"],
         }
 
@@ -72,6 +86,9 @@ def _parse_and_validate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     optimization = str(input_data.get("optimization", "max")).lower().strip()
     hurwicz_lambda = float(input_data.get("lambda", 0.5))
     probabilities = input_data.get("probabilities")
+    selected_criteria = input_data.get("selected_criteria")
+    if selected_criteria is None:
+        selected_criteria = input_data.get("criteria")
 
     if not isinstance(strategies, list) or not strategies:
         raise ValueError("'strategies' must be a non-empty list")
@@ -100,9 +117,18 @@ def _parse_and_validate(input_data: Dict[str, Any]) -> Dict[str, Any]:
             raise ValueError("'probabilities' must sum to a positive value")
         probs = probs / probs.sum()
 
+    selected = None
+    if isinstance(selected_criteria, list) and selected_criteria:
+        allowed = {"wald", "savage", "hurwicz", "laplace", "bayes"}
+        selected = [str(x).lower().strip() for x in selected_criteria if str(x).lower().strip() in allowed]
+        if not selected:
+            selected = None
+
     notes = []
     if optimization == "min":
-        notes.append("Optimization is 'min': criteria computed on utility = -payoff.")
+        notes.append("Режим оптимизации 'min': критерии рассчитаны по полезности = -payoff.")
+    if probabilities is not None and probs is not None and not np.allclose(probs, probabilities):
+        notes.append("Вероятности нормализованы так, чтобы их сумма была равна 1.")
 
     return {
         "decision_maker": decision_maker,
@@ -112,6 +138,7 @@ def _parse_and_validate(input_data: Dict[str, Any]) -> Dict[str, Any]:
         "optimization": optimization,
         "hurwicz_lambda": hurwicz_lambda,
         "probabilities": probs,
+        "selected_criteria": selected,
         "notes": notes,
     }
 
@@ -234,3 +261,131 @@ def _argmax_all(values: np.ndarray, tol: float = 1e-9) -> List[int]:
 def _argmin_all(values: np.ndarray, tol: float = 1e-9) -> List[int]:
     vmin = values.min()
     return [i for i, v in enumerate(values) if abs(v - vmin) <= tol]
+
+
+def _build_recommendation(
+    strategies: List[str],
+    criteria: Dict[str, Any],
+    selected_criteria: Optional[List[str]],
+) -> Dict[str, Any]:
+    considered = []
+    vote_scores = [0.0 for _ in strategies]
+    criterion_details = []
+
+    for key, block in criteria.items():
+        if selected_criteria and key not in selected_criteria:
+            continue
+        idxs = block.get("recommended_indices", [])
+        if not idxs:
+            continue
+        considered.append(key)
+        share = 1.0 / len(idxs)
+        for idx in idxs:
+            vote_scores[idx] += share
+        criterion_details.append({
+            "criterion": key,
+            "recommended_strategies": [strategies[i] for i in idxs],
+            "value": block.get("value"),
+            "opt": block.get("opt"),
+            "reason": _criterion_reason(key, block),
+        })
+
+    if not considered:
+        return {
+            "best_strategy": None,
+            "best_strategies": [],
+            "confidence": 0.0,
+            "votes": [],
+            "criteria_considered": [],
+            "summary": "Для итоговой рекомендации не выбраны доступные критерии.",
+            "details": [],
+        }
+
+    max_vote = max(vote_scores)
+    best_indices = [i for i, score in enumerate(vote_scores) if abs(score - max_vote) <= 1e-9]
+    best_names = [strategies[i] for i in best_indices]
+    confidence = max_vote / len(considered) if considered else 0.0
+    votes = [
+        {
+            "strategy": strategy,
+            "score": float(score),
+            "share": float(score / len(considered)) if considered else 0.0,
+        }
+        for strategy, score in zip(strategies, vote_scores)
+    ]
+
+    if len(best_names) == 1:
+        summary = (
+            f"Лучший выбор: {best_names[0]}. Его поддерживает "
+            f"{max_vote:.2f} критериальных голоса из {len(considered)}."
+        )
+    else:
+        summary = (
+            "Несколько стратегий делят первое место: "
+            + ", ".join(best_names)
+            + f". Каждая получает {max_vote:.2f} критериальных голоса из {len(considered)}."
+        )
+
+    return {
+        "best_strategy": best_names[0] if best_names else None,
+        "best_strategies": best_names,
+        "confidence": float(confidence),
+        "votes": votes,
+        "criteria_considered": considered,
+        "summary": summary,
+        "details": criterion_details,
+    }
+
+
+def _criterion_reason(key: str, block: Dict[str, Any]) -> str:
+    strategies = ", ".join(block.get("recommended_strategies", []) or [])
+    value = block.get("value")
+    value_text = f"{value:.4f}" if isinstance(value, (int, float)) else "недоступно"
+    if key == "wald":
+        return f"{strategies} дает лучший гарантированный результат в худшем случае ({value_text})."
+    if key == "savage":
+        return f"{strategies} минимизирует максимальное сожаление или риск упущенной выгоды ({value_text})."
+    if key == "hurwicz":
+        return f"{strategies} дает лучший баланс между осторожностью и оптимизмом ({value_text})."
+    if key == "laplace":
+        return f"{strategies} имеет лучший средний результат при равновероятных состояниях ({value_text})."
+    if key == "bayes":
+        return f"{strategies} имеет лучшее математическое ожидание с учетом заданных вероятностей ({value_text})."
+    return f"{strategies} рекомендуется этим критерием ({value_text})."
+
+
+def _interpret_hurwicz(hurwicz_lambda: float) -> Dict[str, Any]:
+    optimism_weight = 1.0 - hurwicz_lambda
+    if hurwicz_lambda >= 0.75:
+        stance = "strongly_pessimistic"
+        text = (
+            "Коэффициент близок к 1, поэтому критерий Гурвица сильно учитывает худший исход."
+        )
+    elif hurwicz_lambda >= 0.55:
+        stance = "moderately_pessimistic"
+        text = (
+            "Коэффициент смещен к осторожности: худший исход важнее, чем лучший возможный выигрыш."
+        )
+    elif hurwicz_lambda >= 0.45:
+        stance = "balanced"
+        text = (
+            "Коэффициент сбалансирован: пессимистичный и оптимистичный исходы влияют почти одинаково."
+        )
+    elif hurwicz_lambda >= 0.25:
+        stance = "moderately_optimistic"
+        text = (
+            "Коэффициент смещен к оптимизму: лучший исход важнее, чем защита от худшего случая."
+        )
+    else:
+        stance = "strongly_optimistic"
+        text = (
+            "Коэффициент близок к 0, поэтому критерий Гурвица сильно учитывает лучший исход."
+        )
+
+    return {
+        "lambda": float(hurwicz_lambda),
+        "pessimism_weight": float(hurwicz_lambda),
+        "optimism_weight": float(optimism_weight),
+        "stance": stance,
+        "text": text,
+    }

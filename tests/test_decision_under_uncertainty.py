@@ -16,6 +16,9 @@ def test_decision_under_uncertainty_basic():
     assert "risk_matrix" in result["result"]
     assert "criteria" in result["result"]
     assert "comparison_table" in result["result"]
+    assert result["result"]["probabilities"] == [0.4, 0.3, 0.3]
+    assert result["result"]["recommendation"]["best_strategy"]
+    assert result["result"]["hurwicz_interpretation"]["pessimism_weight"] == 0.5
 
 
 def test_decision_under_uncertainty_no_probabilities():
@@ -30,3 +33,4 @@ def test_decision_under_uncertainty_no_probabilities():
     result = run_algorithm(payload)
     assert result["status"] == "success"
     assert result["result"]["criteria"]["bayes"]["scores"] is None
+    assert "bayes" not in result["result"]["recommendation"]["criteria_considered"]
