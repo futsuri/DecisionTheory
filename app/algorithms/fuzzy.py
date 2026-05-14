@@ -91,7 +91,7 @@ def run_task1(payload):
 def run_task2(payload):
     candidates = _clean_names(payload.get("candidates"), "X", 2, 10)
     characteristics = _clean_names(payload.get("characteristics"), "Y", 2, 15)
-    specialties = _clean_names(payload.get("specialties"), "Z", 2, 10)
+    specialties = _clean_names(payload.get("specialties"), "Z", 1, 10)
     r1 = _matrix(payload.get("R1"), len(characteristics), len(specialties), "R1")
     r2 = _matrix(payload.get("R2"), len(characteristics), len(candidates), "R2")
 

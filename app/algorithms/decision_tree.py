@@ -42,26 +42,26 @@ def classify_candidates(payload):
 
 def _classify_one(name, x1, x2, x3, t1, t2, t3):
     steps = [f"{name}: старт классификации"]
-    if x1 > t1:
-        steps.append(f"if X1 > T1: {x1} > {t1} — да, проверяем X2")
+    if x1 >= t1:
+        steps.append(f"if X1 >= T1: {x1} >= {t1} — да, проверяем X2")
     else:
-        steps.append(f"if X1 > T1: {x1} > {t1} — нет")
+        steps.append(f"if X1 >= T1: {x1} >= {t1} — нет")
         steps.append("else -> Не подходит")
         return "Не подходит", steps
 
-    if x2 > t2:
-        steps.append(f"if X2 > T2: {x2} > {t2} — да, проверяем X3")
+    if x2 >= t2:
+        steps.append(f"if X2 >= T2: {x2} >= {t2} — да, проверяем X3")
     else:
-        steps.append(f"if X2 > T2: {x2} > {t2} — нет")
+        steps.append(f"if X2 >= T2: {x2} >= {t2} — нет")
         steps.append("else -> Подходит условно")
         return "Подходит условно", steps
 
-    if x3 > t3:
-        steps.append(f"if X3 > T3: {x3} > {t3} — да")
+    if x3 >= t3:
+        steps.append(f"if X3 >= T3: {x3} >= {t3} — да")
         steps.append("then -> Подходит")
         return "Подходит", steps
 
-    steps.append(f"if X3 > T3: {x3} > {t3} — нет")
+    steps.append(f"if X3 >= T3: {x3} >= {t3} — нет")
     steps.append("else -> Подходит условно")
     return "Подходит условно", steps
 

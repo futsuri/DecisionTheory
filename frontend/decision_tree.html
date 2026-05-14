@@ -28,7 +28,7 @@
       <div class="game-header">
         <div>
           <h2>Дерево условий</h2>
-          <p class="muted">Если X1 ≤ T1 — кандидат не проходит. Если X1 прошёл, но X2 ≤ T2 — подходит условно. Если X1 и X2 прошли, итог зависит от X3.</p>
+          <p class="muted">Порог включён в диапазон: значение, равное T, считается прошедшим. Если X1 &lt; T1 — кандидат не проходит. Если X1 прошёл, но X2 &lt; T2 — подходит условно. Если X1 и X2 прошли, итог зависит от X3.</p>
         </div>
         <div class="game-actions">
           <button id="tree-example" class="secondary-btn">Загрузить пример</button>
@@ -60,14 +60,14 @@
         </div>
       </div>
 
+      <div class="table-wrap" id="tree-input-table"></div>
+
       <div class="toolbar">
         <div class="toolbar-group">
           <button id="add-tree-row" class="secondary-btn">+ Строка</button>
           <button id="remove-tree-row" class="secondary-btn">− Строка</button>
         </div>
       </div>
-
-      <div class="table-wrap" id="tree-input-table"></div>
 
       <div class="footer-actions">
         <span id="tree-status" class="status"></span>
