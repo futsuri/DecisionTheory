@@ -54,6 +54,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                 window.location.href = "/nature-game";
                 return;
             }
+            if (method.id === "fuzzy_sets") {
+                window.location.href = "/fuzzy";
+                return;
+            }
+            if (method.id === "decision_tree") {
+                window.location.href = "/decision-tree";
+                return;
+            }
             save("algorithm_id", method.id);
             console.log(`Выбран метод: ${method.id} → сохраняем в localStorage`);
             window.location.href = "/input";

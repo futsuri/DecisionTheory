@@ -75,6 +75,26 @@ ALGORITHMS = [
         },
         "available": True,
     },
+    {
+        "id": "fuzzy_sets",
+        "name": "Нечёткие множества",
+        "description": "Операции над нечёткими множествами и композиция нечётких отношений.",
+        "input_schema": {
+            "task1": "membership functions and discretization range",
+            "task2": "candidates, characteristics, specialties, R1, R2",
+        },
+        "available": True,
+    },
+    {
+        "id": "decision_tree",
+        "name": "Решающее дерево",
+        "description": "Классификация кандидатов для информационной безопасности по цепочке if-else.",
+        "input_schema": {
+            "thresholds": "{x1, x2, x3}",
+            "candidates": "list[{name, x1, x2, x3}]",
+        },
+        "available": True,
+    },
 ]
 
 

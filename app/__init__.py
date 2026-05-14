@@ -19,6 +19,8 @@ from app.db import (
 )
 from app.reporter import generate_report
 from app.run_service import create_run, list_algorithms
+from app.algorithms.decision_tree import classify_candidates
+from app.algorithms.fuzzy import run_task1 as run_fuzzy_task1, run_task2 as run_fuzzy_task2
 
 
 def create_app(test_config=None):
@@ -49,6 +51,14 @@ def create_app(test_config=None):
     @app.route("/nature-game")
     def nature_game_page():
         return send_from_directory(frontend_dir, "nature_game.html")
+
+    @app.route("/fuzzy")
+    def fuzzy_page():
+        return send_from_directory(frontend_dir, "fuzzy.html")
+
+    @app.route("/decision-tree")
+    def decision_tree_page():
+        return send_from_directory(frontend_dir, "decision_tree.html")
 
     @app.route("/report")
     def report_page():
@@ -123,6 +133,36 @@ def create_app(test_config=None):
         except Exception as exc:
             return jsonify({"error": str(exc)}), 500
         return jsonify({"run_id": run_id}), 201
+
+    @app.route("/api/fuzzy/task1", methods=["POST"])
+    def fuzzy_task1_route():
+        payload = request.get_json(silent=True) or {}
+        try:
+            return jsonify(run_fuzzy_task1(payload))
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception as exc:
+            return jsonify({"error": str(exc)}), 500
+
+    @app.route("/api/fuzzy/task2", methods=["POST"])
+    def fuzzy_task2_route():
+        payload = request.get_json(silent=True) or {}
+        try:
+            return jsonify(run_fuzzy_task2(payload))
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception as exc:
+            return jsonify({"error": str(exc)}), 500
+
+    @app.route("/api/decision-tree/classify", methods=["POST"])
+    def decision_tree_classify_route():
+        payload = request.get_json(silent=True) or {}
+        try:
+            return jsonify(classify_candidates(payload))
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception as exc:
+            return jsonify({"error": str(exc)}), 500
 
     @app.route("/api/runs/<run_id>", methods=["GET"])
     def run_route(run_id):

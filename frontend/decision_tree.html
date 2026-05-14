@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ТПР — Решающее дерево</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/input.css">
+  <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/decision_tree.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/common.js"></script>
+  <script src="js/decision_tree.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>Решающее дерево</h1>
+    <p class="subtitle">Классификация кандидатов для задач информационной безопасности</p>
+  </header>
+
+  <main>
+    <div class="page-nav">
+      <button onclick="goHome()" class="nav-btn">Главная</button>
+      <button onclick="goHistory()" class="nav-btn">История</button>
+    </div>
+
+    <section class="form-inner game-card">
+      <div class="game-header">
+        <div>
+          <h2>Дерево условий</h2>
+          <p class="muted">Если X1 ≤ T1 — кандидат не проходит. Если X1 прошёл, но X2 ≤ T2 — подходит условно. Если X1 и X2 прошли, итог зависит от X3.</p>
+        </div>
+        <div class="game-actions">
+          <button id="tree-example" class="secondary-btn">Загрузить пример</button>
+          <button id="tree-submit" class="primary-btn">Классифицировать</button>
+        </div>
+      </div>
+
+      <div class="description-box">
+        <h3>Показатели для ИБ</h3>
+        <ul class="task-list">
+          <li><span class="icon">X1</span><span><strong>Техническая база ИБ:</strong> сети, ОС, базовая криптография, уязвимости.</span></li>
+          <li><span class="icon">X2</span><span><strong>Анализ инцидентов:</strong> чтение логов, SIEM, первичная triage-оценка.</span></li>
+          <li><span class="icon">X3</span><span><strong>Регламенты и риск:</strong> аккуратность с политиками доступа, отчётностью и риск-процедурами.</span></li>
+        </ul>
+      </div>
+
+      <div class="grid three-cols">
+        <div class="field">
+          <label>T1 — минимум по технической базе</label>
+          <input id="t1" type="number" min="0" max="100" value="60">
+        </div>
+        <div class="field">
+          <label>T2 — минимум по анализу инцидентов</label>
+          <input id="t2" type="number" min="0" max="100" value="70">
+        </div>
+        <div class="field">
+          <label>T3 — минимум по регламентам и риску</label>
+          <input id="t3" type="number" min="0" max="100" value="65">
+        </div>
+      </div>
+
+      <div class="table-wrap" id="tree-input-table"></div>
+
+      <div class="footer-actions">
+        <span id="tree-status" class="status"></span>
+      </div>
+
+      <div id="tree-results" class="result-block" hidden>
+        <div class="summary-grid" id="tree-summary"></div>
+        <h3>Итоговая классификация</h3>
+        <div class="table-wrap" id="tree-result-table"></div>
+        <h3>Пошаговый вывод</h3>
+        <div id="tree-steps" class="tree-steps"></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

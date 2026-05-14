@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ТПР — Нечёткие множества</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/input.css">
+  <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/fuzzy.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/common.js"></script>
+  <script src="js/fuzzy.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>Нечёткие множества</h1>
+    <p class="subtitle">Операции над функциями принадлежности и композиция нечётких отношений</p>
+  </header>
+
+  <main>
+    <div class="page-nav">
+      <button onclick="goHome()" class="nav-btn">Главная</button>
+      <button onclick="goHistory()" class="nav-btn">История</button>
+    </div>
+
+    <section class="form-inner game-card">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="sets">Операции над нечёткими множествами</button>
+        <button class="tab-btn" data-tab="relations">Композиция нечётких отношений</button>
+      </div>
+
+      <div id="tab-sets" class="tab-panel active">
+        <div class="game-header">
+          <div>
+            <div class="method-header fuzzy-title-row">
+              <h2>Функции принадлежности A1, A2, A3</h2>
+              <button class="faq-toggle" type="button" data-faq="sets" aria-label="FAQ по операциям">?</button>
+            </div>
+            <p class="muted">Диапазон должен давать от 5 до 50 точек дискретизации.</p>
+          </div>
+          <div class="game-actions">
+            <button id="load-task1-example" class="secondary-btn">Загрузить пример</button>
+            <button id="task1-submit" class="primary-btn">Рассчитать</button>
+          </div>
+        </div>
+
+        <div class="grid three-cols">
+          <div class="field"><label>Название понятия</label><input id="concept" type="text" value="Температура"></div>
+          <div class="field"><label>Диапазон [x_min, x_max]</label><div class="inline-inputs"><input id="x-min" type="number" value="0"><input id="x-max" type="number" value="10"></div></div>
+          <div class="field"><label>Шаг и точка x₀</label><div class="inline-inputs"><input id="step" type="number" value="1" step="0.1"><input id="x0" type="number" value="5" step="0.1"></div></div>
+        </div>
+
+        <div class="grid three-cols">
+          <div class="term-box">
+            <h3>A1 — Z-образная</h3>
+            <div class="field">
+              <label>Терм</label>
+              <select id="term-a1" class="select-input">
+                <option value="малый" selected>малый</option>
+                <option value="низкий">низкий</option>
+                <option value="небольшой">небольшой</option>
+              </select>
+            </div>
+            <div class="inline-inputs"><input id="a1-a" type="number" value="2" step="0.1"><input id="a1-c" type="number" value="6" step="0.1"></div>
+            <p class="muted">Параметры a, c</p>
+          </div>
+          <div class="term-box">
+            <h3>A2 — трапециевидная</h3>
+            <div class="field">
+              <label>Терм</label>
+              <select id="term-a2" class="select-input">
+                <option value="средний" selected>средний</option>
+                <option value="нормальный">нормальный</option>
+                <option value="умеренный">умеренный</option>
+              </select>
+            </div>
+            <div class="inline-inputs four"><input id="a2-a" type="number" value="2" step="0.1"><input id="a2-b" type="number" value="4" step="0.1"><input id="a2-c" type="number" value="6" step="0.1"><input id="a2-d" type="number" value="8" step="0.1"></div>
+            <p class="muted">Параметры a, b, c, d</p>
+          </div>
+          <div class="term-box">
+            <h3>A3 — S-образная</h3>
+            <div class="field">
+              <label>Терм</label>
+              <select id="term-a3" class="select-input">
+                <option value="большой" selected>большой</option>
+                <option value="высокий">высокий</option>
+                <option value="значительный">значительный</option>
+              </select>
+            </div>
+            <div class="inline-inputs"><input id="a3-a" type="number" value="4" step="0.1"><input id="a3-c" type="number" value="8" step="0.1"></div>
+            <p class="muted">Параметры a, c</p>
+          </div>
+        </div>
+
+        <div id="task1-status" class="status"></div>
+        <div id="task1-results" class="result-block" hidden>
+          <canvas id="membership-chart" width="1100" height="380"></canvas>
+          <div id="x0-values" class="summary-grid"></div>
+          <div id="a2-properties" class="summary-grid"></div>
+          <h3>Таблица значений</h3>
+          <div class="table-wrap" id="values-table"></div>
+          <h3>Операции над A1 и A2</h3>
+          <div class="table-wrap" id="operations-table"></div>
+        </div>
+      </div>
+
+      <div id="tab-relations" class="tab-panel">
+        <div class="game-header">
+          <div>
+            <div class="method-header fuzzy-title-row">
+              <h2>Соответствие кандидатов специальностям</h2>
+              <button class="faq-toggle" type="button" data-faq="relations" aria-label="FAQ по композиции">?</button>
+            </div>
+            <p class="muted">R1: характеристики → специальности, R2: характеристики → кандидаты.</p>
+          </div>
+          <button id="load-fuzzy-example" class="secondary-btn">Загрузить пример из методички</button>
+        </div>
+
+        <div class="stepper" id="fuzzy-stepper"></div>
+
+        <div class="step-panel active" data-step="1">
+          <div class="field">
+            <label>Название задачи</label>
+            <input id="task-title" type="text" value="Композиция нечётких отношений">
+          </div>
+          <div class="grid three-cols">
+            <div class="field"><label>Характеристики Y (2–15)</label><input id="y-count" type="number" min="2" max="15" value="3"></div>
+            <div class="field"><label>Кандидаты X (2–10)</label><input id="x-count" type="number" min="2" max="10" value="3"></div>
+            <div class="field"><label>Специальности Z (2–10)</label><input id="z-count" type="number" min="2" max="10" value="3"></div>
+          </div>
+          <button id="apply-dimensions" class="primary-btn">Применить размерности</button>
+        </div>
+
+        <div class="step-panel" data-step="2">
+          <div class="names-section">
+            <h3>Характеристики Y</h3><div id="y-names" class="names-grid compact"></div>
+            <h3>Кандидаты X</h3><div id="x-names" class="names-grid compact"></div>
+            <h3>Специальности Z</h3><div id="z-names" class="names-grid compact"></div>
+          </div>
+        </div>
+
+        <div class="step-panel" data-step="3">
+          <h3>Матрица R1 [Y×Z]</h3>
+          <div class="table-wrap" id="r1-grid"></div>
+          <h3>Матрица R2 [Y×X]</h3>
+          <div class="table-wrap" id="r2-grid"></div>
+        </div>
+
+        <div class="step-panel" data-step="4">
+          <div class="footer-actions">
+            <button id="task2-submit" class="primary-btn">Вычислить</button>
+            <span id="task2-status" class="status"></span>
+          </div>
+          <div id="task2-results" class="result-block" hidden>
+            <h3>Матрица max-min</h3>
+            <div class="table-wrap" id="max-min-table"></div>
+            <h3>Матрица max-prod</h3>
+            <div class="table-wrap" id="max-prod-table"></div>
+            <h3>Лучший кандидат для каждой специальности</h3>
+            <div class="table-wrap" id="best-table"></div>
+            <details class="steps-details">
+              <summary>Пошаговые вычисления для каждой ячейки</summary>
+              <div id="cell-steps"></div>
+            </details>
+          </div>
+        </div>
+
+        <div class="wizard-nav">
+          <button id="prev-step" class="secondary-btn">Назад</button>
+          <button id="next-step" class="secondary-btn">Далее</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="fuzzy-faq-modal" class="faq-modal" hidden>
+      <div class="faq-modal-backdrop" data-faq-close></div>
+      <div class="faq-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="fuzzy-faq-title">
+        <div class="faq-modal-header">
+          <h4 id="fuzzy-faq-title"></h4>
+          <button class="faq-modal-close" type="button" data-faq-close aria-label="Закрыть">×</button>
+        </div>
+        <div id="fuzzy-faq-body"></div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
