@@ -48,5 +48,17 @@
       "lambda": "float"
     },
     "available": true
+  },
+  {
+    "id": "fuzzy_sets",
+    "name": "Нечеткие множества",
+    "description": "Оценка значения через функции принадлежности и простой вердикт.",
+    "input_schema": {
+      "variable_name": "str",
+      "scale": "{min: float, max: float}",
+      "terms": "list[{name, function_type, points}]",
+      "x": "float"
+    },
+    "available": true
   }
 ]

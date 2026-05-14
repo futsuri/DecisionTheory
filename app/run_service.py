@@ -10,6 +10,7 @@ from flask import current_app
 
 from app.algorithms.ahp import run_ahp
 from app.algorithms.decision_under_uncertainty import run_algorithm as run_nature_games
+from app.algorithms.fuzzy_sets import run_fuzzy_sets
 from app.algorithms.multi_criteria import run_multi_criteria
 from app.algorithms.two_player_game import run_algorithm as run_pair_games
 from app.db import get_run as fetch_run, insert_report, insert_run, update_run
@@ -72,6 +73,18 @@ ALGORITHMS = [
             "optimization": "max|min",
             "lambda": "float",
             "probabilities": "list[float]|None",
+        },
+        "available": True,
+    },
+    {
+        "id": "fuzzy_sets",
+        "name": "Нечеткие множества",
+        "description": "Фаззификация числового значения по термам и простой логический вывод.",
+        "input_schema": {
+            "variable_name": "str",
+            "scale": "{min: float, max: float}",
+            "terms": "list[{name, function_type, points}]",
+            "x": "float",
         },
         "available": True,
     },
@@ -147,6 +160,8 @@ def _normalize_input(algorithm_id, input_data):
         return _normalize_pair_games_input(input_data)
     if algorithm_id == "nature_games":
         return _normalize_nature_games_input(input_data)
+    if algorithm_id == "fuzzy_sets":
+        return _normalize_fuzzy_sets_input(input_data)
     return input_data
 
 
@@ -374,6 +389,36 @@ def _normalize_nature_games_input(input_data):
     }
 
 
+def _normalize_fuzzy_sets_input(input_data):
+    scale = input_data.get("scale") or {}
+    terms = input_data.get("terms") or []
+    x_value = input_data.get("x")
+
+    normalized_terms = []
+    for idx, term in enumerate(terms):
+        function_type = term.get("function_type") or term.get("type")
+        if function_type == "triangular":
+            function_type = "triangle"
+        if function_type == "trapezoidal":
+            function_type = "trapezoid"
+
+        normalized_terms.append({
+            "name": str(term.get("name") or f"Терм {idx + 1}"),
+            "function_type": function_type,
+            "points": [float(value) for value in (term.get("points") or [])],
+        })
+
+    return {
+        "variable_name": str(input_data.get("variable_name") or "Переменная"),
+        "scale": {
+            "min": float(scale.get("min", 0)),
+            "max": float(scale.get("max", 100)),
+        },
+        "terms": normalized_terms,
+        "x": float(x_value) if x_value is not None else None,
+    }
+
+
 def _sanitize_pairwise_matrix(matrix, precision=10):
     if not isinstance(matrix, list) or not matrix:
         return matrix
@@ -418,6 +463,8 @@ def _validate_for_algorithm(algorithm_id, payload):
         _validate_pair_games_deep(payload)
     if algorithm_id == "nature_games":
         _validate_nature_games_deep(payload)
+    if algorithm_id == "fuzzy_sets":
+        _validate_fuzzy_sets_deep(payload)
 
 
 def _validate_ahp_alt_matrices(payload):
@@ -616,6 +663,8 @@ def _dispatch(algorithm_id, payload):
         if result.get("status") != "success":
             raise ValueError(result.get("result", {}).get("error", "Nature games failed"))
         return result.get("result", {})
+    if algorithm_id == "fuzzy_sets":
+        return run_fuzzy_sets(payload)
     raise ValueError(f"No dispatcher for algorithm '{algorithm_id}'")
 
 
@@ -672,3 +721,39 @@ def _validate_nature_games_deep(payload):
             raise ValueError("NatureGames: 'probabilities' должен быть списком длины states_of_nature")
         if sum(probs) <= 0:
             raise ValueError("NatureGames: сумма вероятностей должна быть положительной")
+
+
+def _validate_fuzzy_sets_deep(payload):
+    terms = payload.get("terms") or []
+    scale = payload.get("scale") or {}
+    x_value = payload.get("x")
+
+    if len(terms) != 3:
+        raise ValueError("FuzzySets: нужно задать ровно 3 терма")
+
+    scale_min = float(scale.get("min", 0))
+    scale_max = float(scale.get("max", 100))
+    if scale_min >= scale_max:
+        raise ValueError("FuzzySets: минимум шкалы должен быть меньше максимума")
+
+    if x_value is None:
+        raise ValueError("FuzzySets: текущее значение x обязательно")
+    if not (scale_min <= float(x_value) <= scale_max):
+        raise ValueError("FuzzySets: текущее значение x должно лежать в пределах шкалы")
+
+    for idx, term in enumerate(terms):
+        name = term.get("name") or f"Терм {idx + 1}"
+        function_type = term.get("function_type")
+        points = term.get("points") or []
+
+        if function_type not in {"triangle", "trapezoid"}:
+            raise ValueError(f"FuzzySets: неизвестный тип функции для терма '{name}'")
+
+        required = 3 if function_type == "triangle" else 4
+        if len(points) != required:
+            raise ValueError(f"FuzzySets: терм '{name}' должен иметь {required} координаты")
+
+        if any(points[i] > points[i + 1] for i in range(len(points) - 1)):
+            raise ValueError(f"FuzzySets: координаты терма '{name}' должны идти по возрастанию")
+        if any(point < scale_min or point > scale_max for point in points):
+            raise ValueError(f"FuzzySets: координаты терма '{name}' должны лежать в пределах шкалы")

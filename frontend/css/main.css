@@ -126,8 +126,8 @@ footer #mode-display:hover {
     margin: 0 auto;
 }
 
-/* Специально для 4 карточек — делаем последнюю по центру */
-.methods-grid:has(.method-card:nth-child(4)) .method-card:nth-child(4) {
+/* Специально для ровно 4 карточек — делаем последнюю по центру */
+.methods-grid:has(.method-card:first-child:nth-last-child(4)) .method-card:nth-child(4) {
     grid-column: 1 / -1;           /* растягиваем на всю ширину */
     justify-self: center;          /* центрируем карточку */
     max-width: 340px;              /* возвращаем нормальную ширину карточки */

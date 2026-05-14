@@ -38,6 +38,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             // Вставляем готовый HTML
             contentEl.innerHTML = html;
 
+            renderFuzzyVisualization(contentEl, reportData);
+
             // Если в отчёте есть графики Chart.js — инициализируем их
             initChartsIfPresent();
             renderReportActions(actionsEl, runId, reportData);
@@ -62,6 +64,121 @@ function renderReportActions(container, runId, reportData) {
         <a href="${csvUrl}" download>Скачать CSV</a>
         <a href="${pdfUrl}" class="secondary" download>Скачать PDF</a>
     `;
+}
+
+function renderFuzzyVisualization(container, reportData) {
+    const visualization = reportData.visualization_data;
+    if (!container || !visualization || !Array.isArray(visualization.term_lines)) {
+        return;
+    }
+    if (typeof Chart === "undefined") {
+        console.warn("Chart.js не загружен, визуализация нечетких множеств пропущена");
+        return;
+    }
+
+    const section = document.createElement("section");
+    section.className = "fuzzy-chart-section";
+    section.innerHTML = `
+        <h2>Графики функций принадлежности</h2>
+        <div class="fuzzy-chart-wrap">
+            <canvas id="fuzzy-membership-chart" aria-label="Графики функций принадлежности"></canvas>
+        </div>
+    `;
+    container.appendChild(section);
+
+    const canvas = section.querySelector("#fuzzy-membership-chart");
+    const colors = ["#2563eb", "#16a34a", "#dc2626"];
+    const termDatasets = visualization.term_lines.map((line, index) => ({
+        label: line.term || `Терм ${index + 1}`,
+        data: normalizeChartPoints(line.points),
+        borderColor: colors[index % colors.length],
+        backgroundColor: colors[index % colors.length],
+        borderWidth: 3,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        tension: 0,
+        fill: false,
+        showLine: true
+    }));
+
+    const currentLine = visualization.current_x_line;
+    if (currentLine && Array.isArray(currentLine.points)) {
+        termDatasets.push({
+            label: `Текущее x = ${currentLine.x}`,
+            data: normalizeChartPoints(currentLine.points),
+            borderColor: "#111827",
+            backgroundColor: "#111827",
+            borderWidth: 2,
+            borderDash: [6, 6],
+            pointRadius: 0,
+            tension: 0,
+            fill: false,
+            showLine: true
+        });
+    }
+
+    new Chart(canvas, {
+        type: "line",
+        data: {
+            datasets: termDatasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            parsing: false,
+            interaction: {
+                mode: "nearest",
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    position: "bottom"
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            const point = ctx.raw || {};
+                            return `${ctx.dataset.label}: (${formatChartNumber(point.x)}, ${formatChartNumber(point.y)})`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: "linear",
+                    min: visualization.x_axis?.min,
+                    max: visualization.x_axis?.max,
+                    title: {
+                        display: true,
+                        text: "Значение переменной"
+                    }
+                },
+                y: {
+                    min: visualization.y_axis?.min ?? 0,
+                    max: visualization.y_axis?.max ?? 1,
+                    title: {
+                        display: true,
+                        text: "Степень принадлежности"
+                    }
+                }
+            }
+        }
+    });
+}
+
+function normalizeChartPoints(points) {
+    return points.map(point => {
+        if (Array.isArray(point)) {
+            return { x: Number(point[0]), y: Number(point[1]) };
+        }
+        return { x: Number(point.x), y: Number(point.y) };
+    });
+}
+
+function formatChartNumber(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return "—";
+    return Number.isInteger(num) ? String(num) : num.toFixed(3);
 }
 
 // Простая функция для поиска и инициализации Chart.js графиков (если они есть в markdown)

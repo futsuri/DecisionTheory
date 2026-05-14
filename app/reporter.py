@@ -60,6 +60,10 @@ def build_report(run_id, algorithm_id, payload, result):
         report = _report_nature_games(run_id, payload, result)
         _attach_report_files(report, run_id, algorithm_id, payload, result)
         return report
+    if algorithm_id == "fuzzy_sets":
+        report = _report_fuzzy_sets(run_id, payload, result)
+        _attach_report_files(report, run_id, algorithm_id, payload, result)
+        return report
     return {
         "run_id": run_id,
         "algorithm_id": algorithm_id,
@@ -443,6 +447,49 @@ def _report_nature_games(run_id, payload, result):
     }
 
 
+def _report_fuzzy_sets(run_id, payload, result):
+    variable_name = payload.get("variable_name", "Переменная")
+    x_value = payload.get("x")
+    scale = payload.get("scale", {})
+    memberships = result.get("memberships", [])
+    verdict = result.get("verdict", "—")
+
+    rows = []
+    for item in memberships:
+        rows.append([
+            item.get("term", "—"),
+            "треугольная" if item.get("function_type") == "triangle" else "трапециевидная",
+            ", ".join(str(v) for v in item.get("points", [])),
+            _fmt_float(item.get("membership")),
+        ])
+
+    markdown = [
+        "# Отчёт по расчёту",
+        "",
+        "**Метод:** Нечеткие множества",
+        "",
+        f'<span style="color:#9ca3af; font-size:0.9em;">Run ID: {run_id}</span>',
+        "",
+        f"**Переменная:** {variable_name}",
+        f"**Шкала:** [{scale.get('min', '—')}, {scale.get('max', '—')}]",
+        f"**Текущее значение:** {x_value}",
+        "",
+        "## Степени принадлежности",
+        _build_md_table(["Терм", "ФП", "Точки", "μ(x)"], rows),
+        "",
+        f"## Вердикт: {verdict}",
+    ]
+
+    return {
+        "run_id": run_id,
+        "algorithm_id": "fuzzy_sets",
+        "markdown": "\n".join(markdown),
+        "membership_degrees": result.get("membership_degrees", memberships),
+        "verdict": verdict,
+        "visualization_data": result.get("visualization_data", {}),
+    }
+
+
 def _build_multi_criteria_charts(optimum, is_feasible):
     """Строит столбчатую диаграмму значений критериев в оптимальной точке."""
     if not optimum or not is_feasible:
@@ -600,6 +647,19 @@ def _write_report_csv(path, algorithm_id, payload, result):
             for key, block in criteria.items():
                 rec = ", ".join(block.get("recommended_strategies", []) or [])
                 writer.writerow([key, rec, block.get("value"), ""])
+        elif algorithm_id == "fuzzy_sets":
+            writer.writerow(["variable_name", "", payload.get("variable_name", ""), ""])
+            writer.writerow(["x", "", payload.get("x"), ""])
+            writer.writerow(["verdict", "", result.get("verdict"), ""])
+            writer.writerow(["", "", "", ""])
+            writer.writerow(["memberships", "", "", ""])
+            for item in result.get("memberships", []):
+                writer.writerow([
+                    "membership",
+                    item.get("term"),
+                    item.get("membership"),
+                    "",
+                ])
 
 
 def _write_report_pdf(path, algorithm_id, payload, result):
@@ -683,6 +743,14 @@ def _write_report_pdf(path, algorithm_id, payload, result):
             rec = ", ".join(block.get("recommended_strategies", []) or [])
             value = block.get("value")
             lines.append(f"- {key}: {rec} (значение: {value})")
+    elif algorithm_id == "fuzzy_sets":
+        lines.append(f"Переменная: {payload.get('variable_name', '')}")
+        lines.append(f"Текущее значение: {payload.get('x')}")
+        lines.append(f"Вердикт: {result.get('verdict')}")
+        lines.append("")
+        lines.append("Степени принадлежности:")
+        for item in result.get("memberships", []):
+            lines.append(f"- {item.get('term')}: {item.get('membership')}")
     else:
         lines.append("Данные для отчёта будут добавлены позже.")
 

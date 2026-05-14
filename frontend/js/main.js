@@ -36,6 +36,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     methods.filter(method => method.available !== false).forEach(method => {
         const card = document.createElement("div");
         card.classList.add("method-card");
+        card.dataset.methodId = method.id;
 
         card.innerHTML = `
             <h3>${method.name}</h3>
@@ -169,12 +170,12 @@ function analyzeTaskAndRedirect() {
             id: "pair_games", url: "/pair-game",
             reason: "Так как в задаче есть активный оппонент, мы используем теорию игр."
         };
-    } else if (p.uncertainty) {
+    } else if (p.uncertainty || p.expert) {
         decision = {
-            id: "nature_games", url: "/nature-game",
-            reason: "Для условий неопределенности лучше всего подходят критерии игр с природой."
+            id: "fuzzy_sets", url: "/input",
+            reason: "При высокой неопределенности или опоре на экспертные оценки удобно использовать нечеткие множества."
         };
-    } else if (p.expert || (p.alt && p.crit && !p.math)) {
+    } else if (p.alt && p.crit && !p.math) {
         decision = {
             id: "ahp", url: "/input",
             reason: "Метод анализа иерархий идеален для выбора по качественным оценкам экспертов."

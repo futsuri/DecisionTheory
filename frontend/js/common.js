@@ -224,7 +224,8 @@ function getMethodNameById(id) {
     ahp: "Метод анализа иерархий (AHP)",
     multi_criteria: "Многокритериальная оптимизация",
     pair_games: "Парные игры",
-    nature_games: "Игры с природой"
+    nature_games: "Игры с природой",
+    fuzzy_sets: "Нечеткие множества"
   };
   return known[id] || "Неизвестный метод";
 }

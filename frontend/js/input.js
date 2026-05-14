@@ -77,7 +77,8 @@ function getMethodNameById(id) {
         ahp: "Метод анализа иерархий (AHP)",
         multi_criteria: "Многокритериальная оптимизация",
         pair_games: "Парные игры",
-        nature_games: "Игры с природой"
+        nature_games: "Игры с природой",
+        fuzzy_sets: "Нечеткие множества"
     };
     return map[id] || `Метод ${id}`;
 }
@@ -116,6 +117,19 @@ function getFaqContent(algId) {
         ];
     }
 
+    if (algId === "fuzzy_sets") {
+        return [
+            {
+                q: "Функции принадлежности",
+                a: "Треугольная функция задаётся тремя точками a, b, c. Трапециевидная задаётся четырьмя точками a, b, c, d."
+            },
+            {
+                q: "Вердикт",
+                a: "Если принадлежность к терму «Высокий» больше 0.7, возвращается «Рекомендовано». Если «Средний» больше 0.5 — «Требует уточнения». Иначе — «Отказ»."
+            }
+        ];
+    }
+
     return null;
 }
 
@@ -128,6 +142,10 @@ function getFaqPlaceholder(algId) {
     if (algId === "multi_criteria") {
         return "В начале пользователю необходимо задать количество критериев и количество переменных оптимизации.\n" +
             "Критерий – некая функция, значение которой необходимо максимизировать или минимизировать.\n";
+    }
+
+    if (algId === "fuzzy_sets") {
+        return "Задайте переменную, шкалу, три терма и текущее значение x. Координаты термов должны идти по возрастанию.";
     }
 
     return "Выберите алгоритм.";
@@ -371,6 +389,42 @@ function renderInputForm(algId, container) {
             });
 
         }
+                } else if (algId === "fuzzy_sets") {
+            inner.innerHTML = `
+                ${buildMethodHeaderHtml("Нечеткие множества")}
+
+                <div class="fuzzy-form">
+                    <div class="fuzzy-grid">
+                        <div class="name-card">
+                            <label for="fuzzy-variable-name">Название переменной</label>
+                            <input type="text" id="fuzzy-variable-name" value="Квалификация">
+                        </div>
+                        <div class="name-card">
+                            <label for="fuzzy-x">Текущее значение x</label>
+                            <input type="number" id="fuzzy-x" value="72" step="0.1">
+                        </div>
+                        <div class="name-card">
+                            <label for="fuzzy-scale-min">Минимум шкалы</label>
+                            <input type="number" id="fuzzy-scale-min" value="0" step="0.1">
+                        </div>
+                        <div class="name-card">
+                            <label for="fuzzy-scale-max">Максимум шкалы</label>
+                            <input type="number" id="fuzzy-scale-max" value="100" step="0.1">
+                        </div>
+                    </div>
+
+                    <h4 class="section-title">Термы и функции принадлежности</h4>
+                    <div id="fuzzy-terms" class="fuzzy-terms"></div>
+                </div>
+
+                <button id="submit-btn" class="primary-btn" style="margin-top:2rem; width:100%;">
+                    Рассчитать степени принадлежности
+                </button>
+            `;
+
+            renderFaqModal(algId, "Нечеткие множества", container);
+            renderFuzzyTerms();
+
                 } else if (algId === "pair_games") {
             inner.innerHTML = `
                 ${buildMethodHeaderHtml("Парные игры")}
@@ -503,6 +557,64 @@ function renderInputForm(algId, container) {
         }
 }
 
+// ====================== НЕЧЕТКИЕ МНОЖЕСТВА ======================
+
+function renderFuzzyTerms() {
+    const container = document.getElementById("fuzzy-terms");
+    if (!container) return;
+
+    const defaults = [
+        { name: "Низкий", function_type: "trapezoid", points: [0, 0, 25, 45] },
+        { name: "Средний", function_type: "triangle", points: [30, 50, 70] },
+        { name: "Высокий", function_type: "trapezoid", points: [55, 75, 100, 100] }
+    ];
+
+    container.innerHTML = defaults.map((term, index) => buildFuzzyTermHtml(term, index)).join("");
+
+    container.querySelectorAll(".fuzzy-function-type").forEach(select => {
+        select.addEventListener("change", () => updateFuzzyPointInputs(select.closest(".fuzzy-term-card")));
+    });
+
+    container.querySelectorAll(".fuzzy-term-card").forEach(updateFuzzyPointInputs);
+}
+
+function buildFuzzyTermHtml(term, index) {
+    return `
+        <div class="fuzzy-term-card" data-term-index="${index}">
+            <div class="fuzzy-term-head">
+                <div class="name-card">
+                    <label>Название терма</label>
+                    <input type="text" class="fuzzy-term-name" value="${term.name}">
+                </div>
+                <div class="name-card">
+                    <label>Тип функции</label>
+                    <select class="fuzzy-function-type">
+                        <option value="triangle" ${term.function_type === "triangle" ? "selected" : ""}>Треугольник</option>
+                        <option value="trapezoid" ${term.function_type === "trapezoid" ? "selected" : ""}>Трапеция</option>
+                    </select>
+                </div>
+            </div>
+            <div class="fuzzy-points" data-default-points="${term.points.join(",")}"></div>
+        </div>
+    `;
+}
+
+function updateFuzzyPointInputs(card) {
+    if (!card) return;
+    const type = card.querySelector(".fuzzy-function-type").value;
+    const pointsContainer = card.querySelector(".fuzzy-points");
+    const current = Array.from(pointsContainer.querySelectorAll(".fuzzy-point")).map(input => input.value);
+    const fallback = (pointsContainer.dataset.defaultPoints || "").split(",");
+    const labels = type === "triangle" ? ["a", "b", "c"] : ["a", "b", "c", "d"];
+
+    pointsContainer.innerHTML = labels.map((label, idx) => `
+        <label>
+            <span>${label}</span>
+            <input type="number" class="fuzzy-point" value="${current[idx] ?? fallback[idx] ?? 0}" step="0.1">
+        </label>
+    `).join("");
+}
+
 // ====================== Генерация всей структуры AHP ======================
 function generateAHPStructure(critCount, altCount, inner) {
     let html = '';
@@ -588,6 +700,55 @@ function generateAHPStructure(critCount, altCount, inner) {
 
 // Обновлённая функция сбора данных для AHP
 function collectFormData(algId) {
+    if (algId === "fuzzy_sets") {
+        const scaleMin = parseFloat(document.getElementById("fuzzy-scale-min").value);
+        const scaleMax = parseFloat(document.getElementById("fuzzy-scale-max").value);
+        const x = parseFloat(document.getElementById("fuzzy-x").value);
+
+        if (!Number.isFinite(scaleMin) || !Number.isFinite(scaleMax) || scaleMin >= scaleMax) {
+            throw new Error("Минимум шкалы должен быть меньше максимума");
+        }
+        if (!Number.isFinite(x)) {
+            throw new Error("Введите текущее значение x");
+        }
+
+        const terms = Array.from(document.querySelectorAll(".fuzzy-term-card")).map((card, idx) => {
+            const name = card.querySelector(".fuzzy-term-name").value.trim() || `Терм ${idx + 1}`;
+            const functionType = card.querySelector(".fuzzy-function-type").value;
+            const points = Array.from(card.querySelectorAll(".fuzzy-point")).map(input => parseFloat(input.value));
+
+            if (points.some(value => !Number.isFinite(value))) {
+                throw new Error(`Заполните все координаты для терма «${name}»`);
+            }
+            if (points.some((value, pointIdx) => pointIdx > 0 && points[pointIdx - 1] > value)) {
+                throw new Error(`Координаты терма «${name}» должны идти по возрастанию`);
+            }
+
+            return {
+                name,
+                function_type: functionType,
+                points
+            };
+        });
+
+        if (terms.length !== 3) {
+            throw new Error("Нужно задать ровно 3 терма");
+        }
+
+        return {
+            algorithm_id: algId,
+            input: {
+                variable_name: document.getElementById("fuzzy-variable-name").value.trim() || "Переменная",
+                scale: {
+                    min: scaleMin,
+                    max: scaleMax
+                },
+                terms,
+                x
+            }
+        };
+    }
+
     if (algId === "pair_games") {
         const matrix = [];
         const rows = document.querySelectorAll("#pair-game-matrix tbody tr");
