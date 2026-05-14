@@ -302,8 +302,8 @@ function setStep(step) {
 }
 
 function applyDimensions() {
-    const yCount = clampInt(num("y-count"), 2, 15);
-    const xCount = clampInt(num("x-count"), 2, 10);
+    const yCount = clampInt(num("y-count"), 1, 10);
+    const xCount = clampInt(num("x-count"), 1, 10);
     const zCount = clampInt(num("z-count"), 1, 10);
     state.characteristics = resizeNames(state.characteristics, yCount, "Y");
     state.candidates = resizeNames(state.candidates, xCount, "X");
