@@ -16,13 +16,14 @@ const defaultCandidates = [
     { name: "Роман Захаров", x1: 93, x2: 81, x3: 77 },
 ];
 
-let candidates = defaultCandidates.map(item => ({ ...item }));
+let candidates = createEmptyCandidates();
 
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("tree-example").addEventListener("click", loadExample);
     document.getElementById("tree-submit").addEventListener("click", classify);
+    document.getElementById("add-tree-row").addEventListener("click", addRow);
+    document.getElementById("remove-tree-row").addEventListener("click", removeRow);
     renderInputTable();
-    classify();
 });
 
 function loadExample() {
@@ -40,9 +41,9 @@ function renderInputTable() {
         <tr>
           <td>${index + 1}</td>
           <td><input class="name-input" data-field="name" data-index="${index}" value="${escapeHtml(candidate.name)}"></td>
-          <td><input type="number" min="0" max="100" data-field="x1" data-index="${index}" value="${candidate.x1}"></td>
-          <td><input type="number" min="0" max="100" data-field="x2" data-index="${index}" value="${candidate.x2}"></td>
-          <td><input type="number" min="0" max="100" data-field="x3" data-index="${index}" value="${candidate.x3}"></td>
+          <td><input type="number" min="0" max="100" data-field="x1" data-index="${index}" value="${escapeHtml(candidate.x1)}"></td>
+          <td><input type="number" min="0" max="100" data-field="x2" data-index="${index}" value="${escapeHtml(candidate.x2)}"></td>
+          <td><input type="number" min="0" max="100" data-field="x3" data-index="${index}" value="${escapeHtml(candidate.x3)}"></td>
         </tr>
     `).join("");
     document.getElementById("tree-input-table").innerHTML = `
@@ -59,11 +60,29 @@ function renderInputTable() {
     `;
 }
 
+function addRow() {
+    readCandidates();
+    candidates.push({ name: "", x1: "", x2: "", x3: "" });
+    renderInputTable();
+    document.getElementById("tree-status").textContent = "Добавлена строка кандидата";
+}
+
+function removeRow() {
+    readCandidates();
+    if (candidates.length <= 1) {
+        document.getElementById("tree-status").textContent = "Должна остаться хотя бы одна строка";
+        return;
+    }
+    candidates.pop();
+    renderInputTable();
+    document.getElementById("tree-status").textContent = "Последняя строка удалена";
+}
+
 function readCandidates() {
     document.querySelectorAll("[data-field]").forEach(input => {
         const index = Number(input.dataset.index);
         const field = input.dataset.field;
-        candidates[index][field] = field === "name" ? input.value.trim() : Number(input.value);
+        candidates[index][field] = input.value.trim();
     });
 }
 
@@ -74,9 +93,9 @@ async function classify() {
     try {
         const result = await postJson("/api/decision-tree/classify", {
             thresholds: {
-                x1: Number(document.getElementById("t1").value),
-                x2: Number(document.getElementById("t2").value),
-                x3: Number(document.getElementById("t3").value),
+                x1: document.getElementById("t1").value.trim(),
+                x2: document.getElementById("t2").value.trim(),
+                x3: document.getElementById("t3").value.trim(),
             },
             candidates,
         });
@@ -85,6 +104,10 @@ async function classify() {
     } catch (error) {
         status.textContent = error.message;
     }
+}
+
+function createEmptyCandidates() {
+    return Array.from({ length: 15 }, () => ({ name: "", x1: "", x2: "", x3: "" }));
 }
 
 function renderResults(result) {
