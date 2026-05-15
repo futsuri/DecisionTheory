@@ -20,6 +20,7 @@ from app.db import (
 from app.reporter import generate_report
 from app.run_service import create_run, list_algorithms
 from app.algorithms.decision_tree import classify_candidates
+from app.algorithms.id3 import build_tree as build_id3_tree, classify_object as classify_id3_object
 from app.algorithms.fuzzy import run_task1 as run_fuzzy_task1, run_task2 as run_fuzzy_task2
 
 
@@ -60,6 +61,14 @@ def create_app(test_config=None):
     def decision_tree_page():
         return send_from_directory(frontend_dir, "decision_tree.html")
 
+    @app.route("/SPPR")
+    def sppr_page():
+        return send_from_directory(frontend_dir, "sppr.html")
+
+    @app.route("/id3")
+    def id3_page():
+        return send_from_directory(frontend_dir, "id3.html")
+
     @app.route("/report")
     def report_page():
         return send_from_directory(frontend_dir, "report.html")
@@ -95,12 +104,21 @@ def create_app(test_config=None):
         return jsonify({"status": "ok", "env": app.config["APP_ENV"]})
 
     @app.route("/api/ready", methods=["GET"])
-    def ready():
-        try:
-            init_db()
-            return jsonify({"status": "ok"})
-        except Exception as exc:
-            return jsonify({"status": "error", "detail": str(exc)}), 503
+    def ready_route():
+        return jsonify({"status": "ready"})
+
+    @app.route("/api/docs", methods=["GET"])
+    def api_docs_page():
+        return send_from_directory(frontend_dir, "api_docs.html")
+
+    @app.route("/api/docs/raw", methods=["GET"])
+    def api_docs_raw_route():
+        import os
+        docs_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "API.md")
+        if not os.path.exists(docs_path):
+            return jsonify({"error": "API.md not found"}), 404
+        with open(docs_path, "r", encoding="utf-8") as f:
+            return f.read(), 200, {"Content-Type": "text/markdown; charset=utf-8"}
 
     # ------------------------------------------------------------------
     #  Алгоритмы
@@ -159,6 +177,27 @@ def create_app(test_config=None):
         payload = request.get_json(silent=True) or {}
         try:
             return jsonify(classify_candidates(payload))
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception as exc:
+            return jsonify({"error": str(exc)}), 500
+
+    @app.route("/api/decision-tree/build", methods=["POST"])
+    @app.route("/api/id3/build", methods=["POST"])
+    def id3_build_route():
+        payload = request.get_json(silent=True) or {}
+        try:
+            return jsonify(build_id3_tree(payload))
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception as exc:
+            return jsonify({"error": str(exc)}), 500
+
+    @app.route("/api/id3/classify", methods=["POST"])
+    def id3_classify_route():
+        payload = request.get_json(silent=True) or {}
+        try:
+            return jsonify(classify_id3_object(payload))
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
         except Exception as exc:

@@ -52,6 +52,36 @@ const example = {
     ],
 };
 
+const ibCompositionExample = {
+    taskTitle: "Выбор средств защиты для задач информационной безопасности",
+    candidates: ["EDR-платформа", "SIEM-система", "MFA/IdP", "DLP-система", "SOAR-платформа"],
+    characteristics: [
+        "Обнаружение атак на рабочих станциях",
+        "Корреляция событий и журналов",
+        "Автоматизация реагирования",
+        "Усиление аутентификации",
+        "Контроль каналов утечки",
+        "Простота внедрения",
+    ],
+    specialties: ["Защита рабочих станций", "Мониторинг SOC", "Защита доступа", "Защита от утечек"],
+    R1: [
+        [1.0, 0.7, 0.2, 0.3],
+        [0.4, 1.0, 0.3, 0.4],
+        [0.7, 0.8, 0.3, 0.3],
+        [0.2, 0.4, 1.0, 0.2],
+        [0.3, 0.5, 0.2, 1.0],
+        [0.6, 0.4, 0.8, 0.5],
+    ],
+    R2: [
+        [0.95, 0.55, 0.2, 0.35, 0.65],
+        [0.5, 0.95, 0.35, 0.5, 0.85],
+        [0.75, 0.6, 0.25, 0.4, 0.95],
+        [0.25, 0.45, 0.95, 0.35, 0.35],
+        [0.35, 0.55, 0.25, 0.95, 0.45],
+        [0.65, 0.45, 0.85, 0.55, 0.5],
+    ],
+};
+
 const faqContent = {
     sets: {
         title: "FAQ: операции над нечёткими множествами",
@@ -65,6 +95,8 @@ const faqContent = {
             ["A2: параметры a, b, c, d", "Трапециевидная функция: рост на (a,b), ядро [b,c], спад на (c,d)."],
             ["A3: параметры a, c", "S-образная функция: до a принадлежность равна 0, после c равна 1, между ними растёт линейно."],
             ["Модификаторы A2", "«Очень» усиливает терм через μ², «довольно» расширяет через √μ."],
+            ["Таблица значений", "Это дискретизация графика: для каждой точки x показываются численные μA1, μA2, μA3 и модификаторы A2."],
+            ["Операции", "Дополнение, T-нормы и S-нормы считаются по каждой точке таблицы. Они показывают отрицание, пересечение и объединение нечётких множеств."],
         ],
     },
     relations: {
@@ -80,6 +112,7 @@ const faqContent = {
             ["max-min", "Для пары кандидат–специальность берётся максимум из минимумов R2 и R1 по всем характеристикам."],
             ["max-prod", "Для пары кандидат–специальность берётся максимум из произведений R2·R1 по всем характеристикам."],
             ["Лучший кандидат", "Для каждой специальности выбирается кандидат с максимальной степенью соответствия."],
+            ["Пошаговый расчёт", "Для каждой пары X–Z система перебирает все характеристики Y, считает min или произведение, затем берёт максимум."],
         ],
     },
 };
@@ -90,9 +123,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     document.getElementById("load-task1-example").addEventListener("click", loadTask1Example);
+    document.getElementById("load-task1-ib-example").addEventListener("click", loadTask1IbExample);
     document.getElementById("task1-submit").addEventListener("click", calculateTask1);
     document.getElementById("apply-dimensions").addEventListener("click", applyDimensions);
     document.getElementById("load-fuzzy-example").addEventListener("click", loadExample);
+    document.getElementById("load-fuzzy-ib-example").addEventListener("click", loadIbCompositionExample);
     document.getElementById("task2-submit").addEventListener("click", calculateTask2);
     document.getElementById("prev-step").addEventListener("click", () => setStep(state.step - 1));
     document.getElementById("next-step").addEventListener("click", () => setStep(state.step + 1));
@@ -109,6 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderStepper();
     renderNames();
     renderMatrices();
+    applyReusePayload();
 });
 
 function switchTab(tab) {
@@ -157,6 +193,73 @@ function loadTask1Example() {
     setValue("a3-c", 8);
     document.getElementById("task1-results").hidden = true;
     document.getElementById("task1-status").textContent = "Пример загружен";
+    document.getElementById("task1-report-actions").innerHTML = "";
+}
+
+function loadTask1IbExample() {
+    setValue("concept", "Уровень риска информационной безопасности");
+    setValue("term-a1", "низкий");
+    setValue("term-a2", "умеренный");
+    setValue("term-a3", "критический");
+    setValue("x-min", 0);
+    setValue("x-max", 100);
+    setValue("step", 10);
+    setValue("x0", 70);
+    setValue("a1-a", 20);
+    setValue("a1-c", 50);
+    setValue("a2-a", 30);
+    setValue("a2-b", 45);
+    setValue("a2-c", 65);
+    setValue("a2-d", 80);
+    setValue("a3-a", 60);
+    setValue("a3-c", 90);
+    document.getElementById("task1-results").hidden = true;
+    document.getElementById("task1-status").textContent = "Пример по ИБ загружен";
+    document.getElementById("task1-report-actions").innerHTML = "";
+}
+
+function applyReusePayload() {
+    const reuse = load("reuse_payload");
+    if (!reuse || reuse.algorithm_id !== "fuzzy_sets" || !reuse.input) return;
+    const payload = reuse.input.input || {};
+    if (reuse.input.task === "task1") {
+        switchTab("sets");
+        setValue("concept", payload.concept || "");
+        const terms = payload.terms || [];
+        setValue("term-a1", terms[0] || "");
+        setValue("term-a2", terms[1] || "");
+        setValue("term-a3", terms[2] || "");
+        setValue("x-min", payload.x_min ?? "");
+        setValue("x-max", payload.x_max ?? "");
+        setValue("step", payload.step ?? "");
+        setValue("x0", payload.x0 ?? "");
+        const params = payload.params || {};
+        setValue("a1-a", params.a1?.a ?? "");
+        setValue("a1-c", params.a1?.c ?? "");
+        setValue("a2-a", params.a2?.a ?? "");
+        setValue("a2-b", params.a2?.b ?? "");
+        setValue("a2-c", params.a2?.c ?? "");
+        setValue("a2-d", params.a2?.d ?? "");
+        setValue("a3-a", params.a3?.a ?? "");
+        setValue("a3-c", params.a3?.c ?? "");
+    }
+    if (reuse.input.task === "task2") {
+        switchTab("relations");
+        state.taskTitle = payload.task_title || state.taskTitle;
+        state.candidates = payload.candidates || state.candidates;
+        state.characteristics = payload.characteristics || state.characteristics;
+        state.specialties = payload.specialties || state.specialties;
+        state.R1 = payload.R1 || state.R1;
+        state.R2 = payload.R2 || state.R2;
+        document.getElementById("task-title").value = state.taskTitle;
+        document.getElementById("y-count").value = state.characteristics.length;
+        document.getElementById("x-count").value = state.candidates.length;
+        document.getElementById("z-count").value = state.specialties.length;
+        renderNames();
+        renderMatrices();
+        setStep(4);
+    }
+    localStorage.removeItem("reuse_payload");
 }
 
 async function calculateTask1() {
@@ -189,6 +292,7 @@ async function calculateTask1() {
             row.s_max, row.s_sum, row.s_bounded, row.s_drastic,
         ]));
         status.textContent = `Готово: ${result.points_count} точек`;
+        createReportRun("task1", payload, "task1-report-actions", status);
     } catch (error) {
         status.textContent = error.message;
     }
@@ -316,12 +420,20 @@ function applyDimensions() {
 }
 
 function loadExample() {
-    state.taskTitle = example.taskTitle;
-    state.characteristics = [...example.characteristics];
-    state.candidates = [...example.candidates];
-    state.specialties = [...example.specialties];
-    state.R1 = example.R1.map(row => [...row]);
-    state.R2 = example.R2.map(row => [...row]);
+    loadCompositionExample(example, "Пример из методички загружен");
+}
+
+function loadIbCompositionExample() {
+    loadCompositionExample(ibCompositionExample, "Пример по ИБ загружен");
+}
+
+function loadCompositionExample(source, message) {
+    state.taskTitle = source.taskTitle;
+    state.characteristics = [...source.characteristics];
+    state.candidates = [...source.candidates];
+    state.specialties = [...source.specialties];
+    state.R1 = source.R1.map(row => [...row]);
+    state.R2 = source.R2.map(row => [...row]);
     document.getElementById("y-count").value = state.characteristics.length;
     document.getElementById("x-count").value = state.candidates.length;
     document.getElementById("z-count").value = state.specialties.length;
@@ -329,7 +441,8 @@ function loadExample() {
     renderNames();
     renderMatrices();
     document.getElementById("task2-results").hidden = true;
-    document.getElementById("task2-status").textContent = "Пример из методички загружен";
+    document.getElementById("task2-status").textContent = message;
+    document.getElementById("task2-report-actions").innerHTML = "";
     setStep(4);
 }
 
@@ -402,12 +515,48 @@ async function calculateTask2() {
         document.getElementById("task2-results").hidden = false;
         renderResultMatrix("max-min-table", result.max_min.matrix);
         renderResultMatrix("max-prod-table", result.max_prod.matrix);
+        renderRecommendations(result.recommendations || []);
         renderBest(result.best_match);
         renderSteps(result.max_min.steps, result.max_prod.steps);
         status.textContent = "Готово";
+        createReportRun("task2", {
+            task_title: state.taskTitle,
+            candidates: state.candidates,
+            characteristics: state.characteristics,
+            specialties: state.specialties,
+            R1: state.R1,
+            R2: state.R2,
+        }, "task2-report-actions", status);
     } catch (error) {
         status.textContent = error.message;
     }
+}
+
+async function createReportRun(task, input, actionsId, statusEl) {
+    const actions = document.getElementById(actionsId);
+    if (actions) actions.innerHTML = "";
+    try {
+        const run = await createRun({
+            algorithm_id: "fuzzy_sets",
+            input: { task, input },
+        });
+        renderReportLinks(actionsId, run.run_id);
+    } catch (error) {
+        statusEl.textContent = `${statusEl.textContent}. Отчёт не сохранён: ${error.message}`;
+    }
+}
+
+function renderReportLinks(containerId, runId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = `
+        <a href="/report" data-report-run="${runId}">Открыть отчёт</a>
+        <a href="/api/reports/${runId}/csv" download>Скачать CSV</a>
+        <a href="/api/reports/${runId}/pdf" download>Скачать PDF</a>
+    `;
+    container.querySelector("[data-report-run]").addEventListener("click", () => {
+        save("run_id", runId);
+    });
 }
 
 function renderResultMatrix(id, matrix) {
@@ -416,6 +565,19 @@ function renderResultMatrix(id, matrix) {
         <tr><th>${escapeHtml(state.candidates[i])}</th>${row.map(value => `<td class="heat-cell" style="${heatStyle(value)}">${fmt(value)}</td>`).join("")}</tr>
     `).join("");
     document.getElementById(id).innerHTML = `<table class="fuzzy-table">${head}${body}</table>`;
+}
+
+function renderRecommendations(recommendations) {
+    const container = document.getElementById("task2-recommendations");
+    if (!container) return;
+    if (!recommendations.length) {
+        container.innerHTML = "";
+        return;
+    }
+    container.innerHTML = recommendations.map(item => card(
+        item.specialty,
+        `${item.recommended_candidate}: ${item.confidence}. ${item.explanation}`
+    )).join("");
 }
 
 function renderBest(best) {

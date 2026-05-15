@@ -291,6 +291,11 @@ footer #mode-display:hover {
     transform: scale(1.03);
 }
 
+.method-card-recommended {
+    border: 2px solid var(--color-primary) !important;
+    box-shadow: 0 14px 30px rgba(37, 99, 235, 0.16) !important;
+}
+
 /* Добавьте в main.css */
 .task-wizard-card {
     background: var(--color-card);
@@ -313,6 +318,30 @@ footer #mode-display:hover {
     margin-top: 0.5rem;
     font-family: inherit;
     resize: vertical;
+}
+
+.keyword-recommendation {
+    display: grid;
+    gap: 0.35rem;
+    margin-top: 0.75rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid rgba(37, 99, 235, 0.28);
+    border-radius: 8px;
+    background: #eff6ff;
+    color: var(--color-text);
+}
+
+.keyword-recommendation.hidden {
+    display: none;
+}
+
+.keyword-recommendation strong {
+    color: var(--color-primary-darker);
+}
+
+.keyword-recommendation span,
+.keyword-recommendation small {
+    color: var(--color-text-light);
 }
 
 .check-grid {

@@ -26,10 +26,16 @@ Frontend доступен на `http://localhost:8000`.
 
 ## API
 
-- `GET /health` → `{"status": "ok"}`
-- `GET /api/algorithms` → список алгоритмов (часть может быть помечена как недоступная)
-- `POST /api/runs` → `{ "algorithm_id": "...", "input": { ... } }`
-- `GET /api/reports/<run_id>` → отчёт в формате markdown
+Полная документация по всем эндпоинтам и схемам данных всех алгоритмов доступна через эндпоинт `GET /api/docs` (или локально в файле [API.md](API.md)).
+
+Краткий список маршрутов:
+- `GET /health` → `{"status": "ok", "time": "..."}`
+- `GET /api/docs` → отдаёт подробную документацию в формате Markdown
+- `GET /api/algorithms` → список алгоритмов с описанием входных полей
+- `POST /api/runs` → Создает прогон алгоритма: `{ "algorithm_id": "...", "input": { ... } }`
+- `GET /api/runs/<run_id>` → Получает результаты прогона
+- `GET /api/reports/<run_id>` → Отчёт о прогоне алгоритма в формате markdown
+- `POST /api/fuzzy/*` и `POST /api/decision-tree/*` → Непосредственные вычислительные ручки
 
 ## Экспорт отчётов
 

@@ -26,7 +26,7 @@
         <h2>Мастер подбора решения</h2>
         <div class="wizard-step">
             <label><strong>1. Опишите вашу задачу кратко:</strong></label>
-            <textarea id="task-text" placeholder="Например: Выбор площадки для нового завода или оценка рисков при запуске продукта..." class="wizard-input"></textarea>
+            <textarea id="task-text" placeholder="Например: построить ID3 по погоде, выбрать средство защиты, оценить риск запуска продукта..." class="wizard-input"></textarea>
         </div>
 
         <div class="wizard-step">
@@ -55,6 +55,18 @@
                 <label class="check-item">
                     <input type="checkbox" id="param-math">
                     <span>Есть готовые математические функции выгоды</span>
+                </label>
+                <label class="check-item">
+                    <input type="checkbox" id="param-fuzzy">
+                    <span>Оценки размытые: низкий / средний / высокий, степени принадлежности</span>
+                </label>
+                <label class="check-item">
+                    <input type="checkbox" id="param-classification">
+                    <span>Есть числовые показатели и понятные пороги для решения</span>
+                </label>
+                <label class="check-item">
+                    <input type="checkbox" id="param-id3">
+                    <span>Есть таблица примеров с текстовыми признаками и известным итогом</span>
                 </label>
             </div>
         </div>

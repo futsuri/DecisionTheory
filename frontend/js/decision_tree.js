@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("add-tree-row").addEventListener("click", addRow);
     document.getElementById("remove-tree-row").addEventListener("click", removeRow);
     renderInputTable();
+    applyReusePayload();
 });
 
 function loadExample() {
@@ -34,6 +35,22 @@ function loadExample() {
     renderInputTable();
     document.getElementById("tree-results").hidden = true;
     document.getElementById("tree-status").textContent = "Пример на 15 кандидатов загружен";
+    document.getElementById("tree-report-actions").innerHTML = "";
+}
+
+function applyReusePayload() {
+    const reuse = load("reuse_payload");
+    if (!reuse || reuse.algorithm_id !== "decision_tree" || !reuse.input) return;
+    const thresholds = reuse.input.thresholds || {};
+    document.getElementById("t1").value = thresholds.x1 ?? "";
+    document.getElementById("t2").value = thresholds.x2 ?? "";
+    document.getElementById("t3").value = thresholds.x3 ?? "";
+    candidates = Array.isArray(reuse.input.candidates)
+        ? reuse.input.candidates.map(item => ({ ...item }))
+        : createEmptyCandidates();
+    renderInputTable();
+    document.getElementById("tree-status").textContent = "Расчёт из истории загружен";
+    localStorage.removeItem("reuse_payload");
 }
 
 function renderInputTable() {
@@ -65,6 +82,7 @@ function addRow() {
     candidates.push({ name: "", x1: "", x2: "", x3: "" });
     renderInputTable();
     document.getElementById("tree-status").textContent = "Добавлена строка кандидата";
+    document.getElementById("tree-report-actions").innerHTML = "";
 }
 
 function removeRow() {
@@ -76,6 +94,7 @@ function removeRow() {
     candidates.pop();
     renderInputTable();
     document.getElementById("tree-status").textContent = "Последняя строка удалена";
+    document.getElementById("tree-report-actions").innerHTML = "";
 }
 
 function readCandidates() {
@@ -90,20 +109,49 @@ async function classify() {
     readCandidates();
     const status = document.getElementById("tree-status");
     status.textContent = "Классификация...";
+    const payload = {
+        thresholds: {
+            x1: document.getElementById("t1").value.trim(),
+            x2: document.getElementById("t2").value.trim(),
+            x3: document.getElementById("t3").value.trim(),
+        },
+        candidates,
+    };
     try {
-        const result = await postJson("/api/decision-tree/classify", {
-            thresholds: {
-                x1: document.getElementById("t1").value.trim(),
-                x2: document.getElementById("t2").value.trim(),
-                x3: document.getElementById("t3").value.trim(),
-            },
-            candidates,
-        });
+        const result = await postJson("/api/decision-tree/classify", payload);
         renderResults(result);
         status.textContent = "Готово";
+        createReportRun(payload, status);
     } catch (error) {
         status.textContent = error.message;
     }
+}
+
+async function createReportRun(input, statusEl) {
+    const actions = document.getElementById("tree-report-actions");
+    if (actions) actions.innerHTML = "";
+    try {
+        const run = await createRun({
+            algorithm_id: "decision_tree",
+            input,
+        });
+        renderReportLinks(run.run_id);
+    } catch (error) {
+        statusEl.textContent = `${statusEl.textContent}. Отчёт не сохранён: ${error.message}`;
+    }
+}
+
+function renderReportLinks(runId) {
+    const container = document.getElementById("tree-report-actions");
+    if (!container) return;
+    container.innerHTML = `
+        <a href="/report" data-report-run="${runId}">Открыть отчёт</a>
+        <a href="/api/reports/${runId}/csv" download>Скачать CSV</a>
+        <a href="/api/reports/${runId}/pdf" download>Скачать PDF</a>
+    `;
+    container.querySelector("[data-report-run]").addEventListener("click", () => {
+        save("run_id", runId);
+    });
 }
 
 function createEmptyCandidates() {

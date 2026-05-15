@@ -105,6 +105,7 @@ def run_task2(payload):
             "max_min": _best(candidates, specialties, max_min),
             "max_prod": _best(candidates, specialties, max_prod),
         },
+        "recommendations": _recommendations(candidates, specialties, max_min, max_prod),
     }
 
 
@@ -148,6 +149,75 @@ def _best(candidates, specialties, matrix):
             "value": matrix[best_i][j],
         })
     return rows
+
+
+def _recommendations(candidates, specialties, max_min, max_prod):
+    rows = []
+    for j, specialty in enumerate(specialties):
+        min_rank = _rank_for_specialty(candidates, max_min, j)
+        prod_rank = _rank_for_specialty(candidates, max_prod, j)
+        min_best = min_rank[0]
+        prod_best = prod_rank[0]
+        agreed = min_best["candidate"] == prod_best["candidate"]
+
+        recommended = min_best if agreed else _combined_winner(candidates, max_min, max_prod, j)
+        min_margin = _round(min_best["value"] - min_rank[1]["value"]) if len(min_rank) > 1 else min_best["value"]
+        prod_margin = _round(prod_best["value"] - prod_rank[1]["value"]) if len(prod_rank) > 1 else prod_best["value"]
+        confidence = _confidence_label(agreed, min_margin, prod_margin)
+
+        if agreed:
+            explanation = (
+                f"Обе композиции выбрали {recommended['candidate']}: "
+                f"max-min={_round(min_best['value'])}, max-prod={_round(prod_best['value'])}. "
+                f"Отрыв от ближайшей альтернативы: max-min={min_margin}, max-prod={prod_margin}."
+            )
+        else:
+            explanation = (
+                f"Методы дали разные первые места ({min_best['candidate']} и {prod_best['candidate']}); "
+                f"по среднему значению двух композиций предпочтительнее {recommended['candidate']}."
+            )
+
+        rows.append({
+            "specialty": specialty,
+            "recommended_candidate": recommended["candidate"],
+            "confidence": confidence,
+            "max_min_candidate": min_best["candidate"],
+            "max_min_value": _round(min_best["value"]),
+            "max_min_margin": min_margin,
+            "max_prod_candidate": prod_best["candidate"],
+            "max_prod_value": _round(prod_best["value"]),
+            "max_prod_margin": prod_margin,
+            "methods_agree": agreed,
+            "explanation": explanation,
+        })
+    return rows
+
+
+def _rank_for_specialty(candidates, matrix, specialty_index):
+    rows = []
+    for i, candidate in enumerate(candidates):
+        rows.append({
+            "candidate": candidate,
+            "value": matrix[i][specialty_index],
+        })
+    return sorted(rows, key=lambda item: item["value"], reverse=True)
+
+
+def _combined_winner(candidates, max_min, max_prod, specialty_index):
+    best = None
+    for i, candidate in enumerate(candidates):
+        value = _round((max_min[i][specialty_index] + max_prod[i][specialty_index]) / 2)
+        if best is None or value > best["value"]:
+            best = {"candidate": candidate, "value": value}
+    return best
+
+
+def _confidence_label(agreed, min_margin, prod_margin):
+    if agreed and min_margin >= 0.15 and prod_margin >= 0.15:
+        return "уверенный выбор"
+    if agreed:
+        return "согласованный выбор"
+    return "требует экспертной проверки"
 
 
 def _build_points(x_min, x_max, step):

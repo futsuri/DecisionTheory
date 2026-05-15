@@ -9,7 +9,10 @@ import uuid
 from flask import current_app
 
 from app.algorithms.ahp import run_ahp
+from app.algorithms.decision_tree import classify_candidates
 from app.algorithms.decision_under_uncertainty import run_algorithm as run_nature_games
+from app.algorithms.fuzzy import run_task1 as run_fuzzy_task1, run_task2 as run_fuzzy_task2
+from app.algorithms.id3 import build_tree as build_id3_tree
 from app.algorithms.multi_criteria import run_multi_criteria
 from app.algorithms.two_player_game import run_algorithm as run_pair_games
 from app.db import get_run as fetch_run, insert_report, insert_run, update_run
@@ -82,6 +85,17 @@ ALGORITHMS = [
         "input_schema": {
             "task1": "membership functions and discretization range",
             "task2": "candidates, characteristics, specialties, R1, R2",
+        },
+        "available": True,
+    },
+    {
+        "id": "id3",
+        "name": "Алгоритмическое дерево решений (ID3)",
+        "description": "Построение дерева решений по категориальным признакам через энтропию и информационный выигрыш.",
+        "input_schema": {
+            "features": "list[str]",
+            "target": "str",
+            "data": "list[list[str]]",
         },
         "available": True,
     },
@@ -656,6 +670,17 @@ def _dispatch(algorithm_id, payload):
         if result.get("status") != "success":
             raise ValueError(result.get("result", {}).get("error", "Nature games failed"))
         return result.get("result", {})
+    if algorithm_id == "fuzzy_sets":
+        task = payload.get("task")
+        if task == "task1":
+            return run_fuzzy_task1(payload.get("input", {}))
+        if task == "task2":
+            return run_fuzzy_task2(payload.get("input", {}))
+        raise ValueError("FuzzySets: task must be 'task1' or 'task2'")
+    if algorithm_id == "decision_tree":
+        return classify_candidates(payload)
+    if algorithm_id == "id3":
+        return build_id3_tree(payload)
     raise ValueError(f"No dispatcher for algorithm '{algorithm_id}'")
 
 

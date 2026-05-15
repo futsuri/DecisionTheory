@@ -60,6 +60,18 @@ def build_report(run_id, algorithm_id, payload, result):
         report = _report_nature_games(run_id, payload, result)
         _attach_report_files(report, run_id, algorithm_id, payload, result)
         return report
+    if algorithm_id == "fuzzy_sets":
+        report = _report_fuzzy_sets(run_id, payload, result)
+        _attach_report_files(report, run_id, algorithm_id, payload, result)
+        return report
+    if algorithm_id == "decision_tree":
+        report = _report_decision_tree(run_id, payload, result)
+        _attach_report_files(report, run_id, algorithm_id, payload, result)
+        return report
+    if algorithm_id == "id3":
+        report = _report_id3(run_id, payload, result)
+        _attach_report_files(report, run_id, algorithm_id, payload, result)
+        return report
     return {
         "run_id": run_id,
         "algorithm_id": algorithm_id,
@@ -551,6 +563,251 @@ def _report_nature_games(run_id, payload, result):
     }
 
 
+def _report_fuzzy_sets(run_id, payload, result):
+    task = payload.get("task")
+    source = payload.get("input", {})
+    markdown = [
+        "# Отчёт по расчёту",
+        "",
+        "**Метод:** Нечёткие множества",
+        "",
+        f'<span style="color:#9ca3af; font-size:0.9em;">Run ID: {run_id}</span>',
+        "",
+    ]
+
+    if task == "task1":
+        terms = result.get("terms", source.get("terms", []))
+        x0_values = result.get("x0_values", {})
+        term_values = [
+            (terms[0] if len(terms) > 0 else "A1", x0_values.get("a1")),
+            (terms[1] if len(terms) > 1 else "A2", x0_values.get("a2")),
+            (terms[2] if len(terms) > 2 else "A3", x0_values.get("a3")),
+        ]
+        best_term, best_value = max(term_values, key=lambda item: float(item[1] or 0))
+        markdown.extend([
+            "## Операции над нечёткими множествами",
+            f"**Понятие:** {result.get('concept', source.get('concept', '—'))}",
+            f"**Термы:** {', '.join(terms)}",
+            f"**Количество точек:** {result.get('points_count')}",
+            "",
+            "## Вывод",
+            f"В точке x₀={x0_values.get('x')} максимальная принадлежность у терма **{best_term}**: μ={_fmt_float(best_value)}.",
+            "Это означает, что именно этот словесный уровень лучше всего описывает заданное значение x₀.",
+            "",
+            "### Значения в точке x₀",
+        ])
+        markdown.append(_build_md_table(
+            ["x₀", "μA1", "μA2", "μA3"],
+            [[x0_values.get("x"), x0_values.get("a1"), x0_values.get("a2"), x0_values.get("a3")]],
+        ))
+        props = result.get("a2_properties", {})
+        markdown.extend([
+            "",
+            "### Свойства A2",
+            f"- Носитель: {props.get('support_label') or props.get('support')}",
+            f"- Ядро: {props.get('core')}",
+            f"- Точки перехода μ=0.5: {props.get('transition_points')}",
+            "",
+            "### Таблица значений",
+            _build_md_table(
+                ["x", "A1", "A2", "A3", "A2 очень", "A2 довольно"],
+                [[row.get("x"), row.get("a1"), row.get("a2"), row.get("a3"), row.get("a2_very"), row.get("a2_fairly")] for row in result.get("values", [])],
+            ),
+            "",
+            "### Операции A1 и A2",
+            _build_md_table(
+                ["x", "¬A1", "T-MIN", "T-PROD", "T-гр.", "T-драст.", "S-MAX", "S-SUM", "S-гр.", "S-драст."],
+                [[row.get("x"), row.get("not_a1"), row.get("t_min"), row.get("t_prod"), row.get("t_bounded"), row.get("t_drastic"), row.get("s_max"), row.get("s_sum"), row.get("s_bounded"), row.get("s_drastic")] for row in result.get("operations", [])],
+            ),
+        ])
+    elif task == "task2":
+        candidates = source.get("candidates", [])
+        characteristics = source.get("characteristics", [])
+        specialties = source.get("specialties", [])
+        recommendations = result.get("recommendations", [])
+        markdown.extend([
+            "## Композиция нечётких отношений",
+            f"**Задача:** {source.get('task_title', '—')}",
+            "",
+            "## Итоговый выбор",
+        ])
+        if recommendations:
+            for item in recommendations:
+                markdown.append(
+                    f"- **{item.get('specialty')}**: выбрать **{item.get('recommended_candidate')}** "
+                    f"({item.get('confidence')}). {item.get('explanation')}"
+                )
+        else:
+            markdown.append("Итоговая рекомендация не сформирована: проверьте входные матрицы.")
+        markdown.extend([
+            "",
+            "### Почему этому можно доверять",
+            "В отчёте сравниваются две композиции: max-min как осторожная оценка соответствия и max-prod как более чувствительная оценка силы связи. Если оба метода выбирают один и тот же вариант, рекомендация считается согласованной.",
+            "",
+            "### Матрица R1: важность характеристик для целевых вариантов",
+            _build_md_matrix(characteristics, specialties, source.get("R1", [])),
+            "",
+            "### Матрица R2: выраженность характеристик у кандидатов",
+            _build_md_matrix(characteristics, candidates, source.get("R2", [])),
+            "",
+            "### Матрица max-min",
+            _build_md_matrix(candidates, specialties, result.get("max_min", {}).get("matrix", [])),
+            "",
+            "### Матрица max-prod",
+            _build_md_matrix(candidates, specialties, result.get("max_prod", {}).get("matrix", [])),
+            "",
+            "### Лучший кандидат для каждой специальности",
+        ])
+        if recommendations:
+            markdown.extend([
+                _build_md_table(
+                    [
+                        "Целевой вариант",
+                        "Рекомендация",
+                        "Надёжность",
+                        "max-min",
+                        "Отрыв",
+                        "max-prod",
+                        "Отрыв",
+                    ],
+                    [
+                        [
+                            item.get("specialty"),
+                            item.get("recommended_candidate"),
+                            item.get("confidence"),
+                            f"{item.get('max_min_candidate')} ({_fmt_float(item.get('max_min_value'))})",
+                            _fmt_float(item.get("max_min_margin")),
+                            f"{item.get('max_prod_candidate')} ({_fmt_float(item.get('max_prod_value'))})",
+                            _fmt_float(item.get("max_prod_margin")),
+                        ]
+                        for item in recommendations
+                    ],
+                ),
+                "",
+            ])
+        rows = []
+        best = result.get("best_match", {})
+        for mm, mp in zip(best.get("max_min", []), best.get("max_prod", [])):
+            rows.append([
+                mm.get("specialty"),
+                mm.get("candidate"),
+                mm.get("value"),
+                mp.get("candidate"),
+                mp.get("value"),
+            ])
+        markdown.append(_build_md_table(["Специальность", "max-min", "Значение", "max-prod", "Значение"], rows))
+    else:
+        markdown.append("Неизвестная подзадача модуля нечётких множеств.")
+
+    return {
+        "run_id": run_id,
+        "algorithm_id": "fuzzy_sets",
+        "markdown": "\n".join(markdown),
+    }
+
+
+def _report_decision_tree(run_id, payload, result):
+    thresholds = result.get("thresholds", payload.get("thresholds", {}))
+    markdown = [
+        "# Отчёт по расчёту",
+        "",
+        "**Метод:** Решающее дерево",
+        "",
+        f'<span style="color:#9ca3af; font-size:0.9em;">Run ID: {run_id}</span>',
+        "",
+        "## Пороги",
+        f"- T1: {thresholds.get('x1')}",
+        f"- T2: {thresholds.get('x2')}",
+        f"- T3: {thresholds.get('x3')}",
+        "",
+        "## Итоговая классификация",
+    ]
+    rows = []
+    for item in result.get("results", []):
+        rows.append([item.get("name"), item.get("x1"), item.get("x2"), item.get("x3"), item.get("verdict")])
+    markdown.append(_build_md_table(["Кандидат", "X1", "X2", "X3", "Вердикт"], rows))
+    markdown.extend(["", "## Пошаговый вывод"])
+    for item in result.get("results", []):
+        markdown.append("")
+        markdown.append(f"### {item.get('name')} — {item.get('verdict')}")
+        for step in item.get("steps", []):
+            markdown.append(f"- {step}")
+
+    return {
+        "run_id": run_id,
+        "algorithm_id": "decision_tree",
+        "markdown": "\n".join(markdown),
+    }
+
+
+def _report_id3(run_id, payload, result):
+    stats = result.get("stats", {})
+    distribution = stats.get("class_distribution", {})
+    distribution_text = ", ".join(f"{label}: {count}" for label, count in distribution.items()) or "—"
+    root_feature = stats.get("root_feature")
+    root_gains = stats.get("root_gains", [])
+    root_gain = next((item.get("gain") for item in root_gains if item.get("feature") == root_feature), None)
+    target = payload.get("target") or "целевой класс"
+    markdown = [
+        "# Отчёт по расчёту",
+        "",
+        "**Метод:** Алгоритмическое дерево решений (ID3)",
+        "",
+        f'<span style="color:#9ca3af; font-size:0.9em;">Run ID: {run_id}</span>',
+        "",
+        "## Краткий вывод",
+        f"Задача: **{payload.get('task_title') or stats.get('task_title') or '—'}**.",
+        f"Дерево построено по {stats.get('objects_count')} объектам и {stats.get('features_count')} категориальным признакам. Целевой класс: **{target}**.",
+        f"Начальная неопределённость выборки H(S) = **{_fmt_float(stats.get('root_entropy'), 3)} бит**. Распределение классов: {distribution_text}.",
+    ]
+    if root_feature:
+        markdown.append(
+            f"Корневым выбран признак **{root_feature}**, потому что он даёт максимальный информационный выигрыш"
+            f"{f' IG = {_fmt_float(root_gain, 3)}' if root_gain is not None else ''}."
+        )
+    else:
+        markdown.append("Все объекты в обучающей выборке уже относятся к одному классу, поэтому дерево состоит из одного листа.")
+    markdown.extend([
+        "",
+        "## Что означают показатели",
+        "- **H(S)** показывает смешанность классов до разбиения: 0 бит означает, что все объекты одного класса; чем значение выше, тем сильнее неопределённость.",
+        "- **IG(S,A)** показывает, насколько признак A уменьшает неопределённость. ID3 выбирает признак с максимальным IG.",
+        "",
+        "## Информационный выигрыш в корне",
+        _build_md_table(
+            ["Признак", "IG"],
+            [[item.get("feature"), _fmt_float(item.get("gain"), 3)] for item in root_gains],
+        ),
+        "",
+        "Вывод: первый вопрос дерева — это признак с максимальным IG. Именно он лучше всего разделяет обучающие объекты по целевому классу.",
+        "",
+        "## Дерево",
+        "```text",
+        *_render_id3_tree(result.get("tree", {})),
+        "```",
+        "",
+        "## Как использовать дерево",
+        "Для нового объекта нужно идти от корня: на каждом внутреннем узле выбрать ветку, равную значению соответствующего признака. Когда путь приходит в лист, значение листа и есть предсказанный класс.",
+        "",
+        "## Пошаговые вычисления",
+    ])
+    for index, step in enumerate(result.get("steps", []), start=1):
+        path = " → ".join(f"{item.get('feature')}={item.get('value')}" for item in step.get("path", [])) or "корень"
+        markdown.extend([
+            "",
+            f"### Узел {index}: {path}",
+            f"- Размер подвыборки: {step.get('samples')}",
+            f"- Распределение классов: {', '.join(f'{k}: {v}' for k, v in (step.get('distribution') or {}).items())}",
+            f"- H(S) = {_fmt_float(step.get('entropy'), 3)}",
+            f"- Выбран признак: **{step.get('selected_feature')}**",
+            _build_md_table(
+                ["Признак", "IG"],
+                [[item.get("feature"), _fmt_float(item.get("gain"), 3)] for item in step.get("gains", [])],
+            ),
+        ])
+    return {"run_id": run_id, "algorithm_id": "id3", "markdown": "\n".join(markdown)}
+
+
 def _build_multi_criteria_charts(optimum, is_feasible):
     """Строит столбчатую диаграмму значений критериев в оптимальной точке."""
     if not optimum or not is_feasible:
@@ -708,6 +965,60 @@ def _write_report_csv(path, algorithm_id, payload, result):
             for key, block in criteria.items():
                 rec = ", ".join(block.get("recommended_strategies", []) or [])
                 writer.writerow([key, rec, block.get("value"), ""])
+        elif algorithm_id == "fuzzy_sets":
+            task = payload.get("task")
+            source = payload.get("input", {})
+            writer.writerow(["task", "", task, ""])
+            if task == "task1":
+                writer.writerow(["concept", "", result.get("concept", source.get("concept", "")), ""])
+                writer.writerow(["", "", "", ""])
+                writer.writerow(["values", "x", "a1", "a2"])
+                for row in result.get("values", []):
+                    writer.writerow(["value", row.get("x"), row.get("a1"), row.get("a2")])
+                writer.writerow(["", "", "", ""])
+                writer.writerow(["operations", "x", "t_min", "s_max"])
+                for row in result.get("operations", []):
+                    writer.writerow(["operation", row.get("x"), row.get("t_min"), row.get("s_max")])
+            elif task == "task2":
+                candidates = source.get("candidates", [])
+                specialties = source.get("specialties", [])
+                recommendations = result.get("recommendations", [])
+                if recommendations:
+                    writer.writerow(["", "", "", ""])
+                    writer.writerow(["recommendations", "specialty", "candidate", "confidence"])
+                    for item in recommendations:
+                        writer.writerow([
+                            "recommendation",
+                            item.get("specialty"),
+                            item.get("recommended_candidate"),
+                            item.get("confidence"),
+                        ])
+                for method_key in ("max_min", "max_prod"):
+                    writer.writerow(["", "", "", ""])
+                    writer.writerow([method_key, "candidate", "specialty", "value"])
+                    matrix = result.get(method_key, {}).get("matrix", [])
+                    for i, row in enumerate(matrix):
+                        candidate = candidates[i] if i < len(candidates) else i + 1
+                        for j, value in enumerate(row):
+                            specialty = specialties[j] if j < len(specialties) else j + 1
+                            writer.writerow([method_key, candidate, specialty, value])
+        elif algorithm_id == "decision_tree":
+            thresholds = result.get("thresholds", payload.get("thresholds", {}))
+            writer.writerow(["threshold", "T1", thresholds.get("x1"), ""])
+            writer.writerow(["threshold", "T2", thresholds.get("x2"), ""])
+            writer.writerow(["threshold", "T3", thresholds.get("x3"), ""])
+            writer.writerow(["", "", "", ""])
+            writer.writerow(["classification", "candidate", "verdict", ""])
+            for item in result.get("results", []):
+                writer.writerow(["classification", item.get("name"), item.get("verdict"), ""])
+        elif algorithm_id == "id3":
+            stats = result.get("stats", {})
+            writer.writerow(["root_entropy", "", stats.get("root_entropy"), ""])
+            writer.writerow(["root_feature", "", stats.get("root_feature"), ""])
+            writer.writerow(["", "", "", ""])
+            writer.writerow(["root_gains", "feature", "gain", ""])
+            for item in stats.get("root_gains", []):
+                writer.writerow(["root_gain", item.get("feature"), item.get("gain"), ""])
 
 
 def _write_report_pdf(path, algorithm_id, payload, result):
@@ -791,6 +1102,45 @@ def _write_report_pdf(path, algorithm_id, payload, result):
             rec = ", ".join(block.get("recommended_strategies", []) or [])
             value = block.get("value")
             lines.append(f"- {key}: {rec} (значение: {value})")
+    elif algorithm_id == "fuzzy_sets":
+        task = payload.get("task")
+        source = payload.get("input", {})
+        lines.append(f"Подзадача: {task}")
+        if task == "task1":
+            lines.append(f"Понятие: {result.get('concept', source.get('concept', ''))}")
+            x0 = result.get("x0_values", {})
+            lines.append(f"x0: {x0.get('x')}, A1={x0.get('a1')}, A2={x0.get('a2')}, A3={x0.get('a3')}")
+            props = result.get("a2_properties", {})
+            lines.append(f"Носитель A2: {props.get('support_label') or props.get('support')}")
+        elif task == "task2":
+            best = result.get("best_match", {})
+            recommendations = result.get("recommendations", [])
+            lines.append(f"Задача: {source.get('task_title', '')}")
+            if recommendations:
+                lines.append("Итоговый выбор:")
+                for item in recommendations:
+                    lines.append(
+                        f"- {item.get('specialty')}: {item.get('recommended_candidate')} "
+                        f"({item.get('confidence')}); {item.get('explanation')}"
+                    )
+                lines.append("")
+            lines.append("Лучшие кандидаты max-min:")
+            for item in best.get("max_min", []):
+                lines.append(f"- {item.get('specialty')}: {item.get('candidate')} ({item.get('value')})")
+    elif algorithm_id == "decision_tree":
+        thresholds = result.get("thresholds", payload.get("thresholds", {}))
+        lines.append(f"T1={thresholds.get('x1')}, T2={thresholds.get('x2')}, T3={thresholds.get('x3')}")
+        lines.append("")
+        lines.append("Классификация:")
+        for item in result.get("results", []):
+            lines.append(f"- {item.get('name')}: {item.get('verdict')} (X1={item.get('x1')}, X2={item.get('x2')}, X3={item.get('x3')})")
+    elif algorithm_id == "id3":
+        stats = result.get("stats", {})
+        lines.append(f"H(S): {stats.get('root_entropy')} бит")
+        lines.append(f"Корневой признак: {stats.get('root_feature')}")
+        lines.append("Информационный выигрыш:")
+        for item in stats.get("root_gains", []):
+            lines.append(f"- {item.get('feature')}: {item.get('gain')}")
     else:
         lines.append("Данные для отчёта будут добавлены позже.")
 
@@ -952,6 +1302,20 @@ def _build_md_matrix(row_labels, col_labels, matrix):
         label = row_labels[idx] if idx < len(row_labels) else str(idx + 1)
         rows.append([label] + [_fmt_float(value) for value in row])
     return _build_md_table(headers, rows)
+
+
+def _render_id3_tree(node, prefix=""):
+    if not node:
+        return ["—"]
+    if node.get("type") == "leaf":
+        return [f"{prefix}→ {node.get('class')}"]
+    lines = [f"{prefix}{node.get('feature')}"]
+    children = node.get("children") or {}
+    for value, child in children.items():
+        child_lines = _render_id3_tree(child, prefix + "  ")
+        lines.append(f"{prefix}├── {value}: {child_lines[0].strip()}")
+        lines.extend(child_lines[1:])
+    return lines
 
 
 def _fmt_float(value, precision=4):

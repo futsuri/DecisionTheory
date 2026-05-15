@@ -112,3 +112,22 @@
 .tree-step li {
     margin-bottom: 0.35rem;
 }
+
+.report-actions-inline {
+    display: flex;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+}
+
+.report-actions-inline a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-neutral);
+    color: var(--color-text);
+    padding: 0.55rem 0.85rem;
+    text-decoration: none;
+    font-weight: 600;
+}

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ТПР — ID3</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/input.css">
+  <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/id3.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/common.js"></script>
+  <script src="js/id3.js?v=2" defer></script>
+</head>
+<body>
+  <header>
+    <h1>Алгоритмическое дерево решений (ID3)</h1>
+    <p class="subtitle">Категориальная классификация через энтропию и информационный выигрыш</p>
+  </header>
+
+  <main>
+    <div class="page-nav">
+      <button onclick="goHome()" class="nav-btn">Главная</button>
+      <button onclick="goHistory()" class="nav-btn">История</button>
+    </div>
+
+    <section class="form-inner game-card">
+      <div class="game-header">
+        <div>
+          <h2>Ввод данных</h2>
+          <p class="muted">Только категориальные признаки: 5–50 объектов, 2–7 признаков.</p>
+        </div>
+        <div class="game-actions">
+          <button id="id3-weather" class="secondary-btn">Пример: погода</button>
+          <button id="id3-security" class="secondary-btn">Пример: ИБ</button>
+          <button id="id3-build" class="primary-btn">Построить дерево</button>
+        </div>
+      </div>
+
+      <div class="grid two-cols">
+        <div class="field"><label>Название задачи</label><input id="id3-task-title" type="text" placeholder="Например: контроль доступа"></div>
+        <div class="field"><label>Количество признаков (2–7)</label><input id="id3-feature-count" type="number" min="2" max="7" value="2"></div>
+      </div>
+      <button id="id3-apply-columns" class="secondary-btn">Применить столбцы</button>
+
+      <div class="table-wrap" id="id3-table"></div>
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <button id="id3-add-row" class="secondary-btn">+ Строка</button>
+          <button id="id3-remove-row" class="secondary-btn">− Строка</button>
+        </div>
+      </div>
+
+      <div class="footer-actions"><span id="id3-status" class="status"></span></div>
+      <div id="id3-report-actions" class="report-actions-inline"></div>
+
+      <div id="id3-results" class="result-block" hidden>
+        <div class="summary-grid" id="id3-summary"></div>
+        <h3>Визуальное дерево</h3>
+        <div id="id3-tree-view" class="id3-tree"></div>
+        <details class="tree-step">
+          <summary>Пошаговые вычисления</summary>
+          <div id="id3-steps"></div>
+        </details>
+        <h3>Классификация объекта</h3>
+        <div id="id3-classifier" class="grid three-cols"></div>
+        <button id="id3-classify" class="primary-btn">Классифицировать объект</button>
+        <div id="id3-classification-result" class="description-box" hidden></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -105,6 +105,18 @@ document.addEventListener("DOMContentLoaded", async () => {
                         algorithm_id: runData.algorithm_id,
                         input: runData.input
                     });
+                    if (runData.algorithm_id === "fuzzy_sets") {
+                        window.location.href = "/fuzzy";
+                        return;
+                    }
+                    if (runData.algorithm_id === "decision_tree") {
+                        window.location.href = "/decision-tree";
+                        return;
+                    }
+                    if (runData.algorithm_id === "id3") {
+                        window.location.href = "/id3";
+                        return;
+                    }
                     window.location.href = "/input";
                 } catch (err) {
                     showError("history-container", "Ошибка загрузки расчёта: " + err.message);

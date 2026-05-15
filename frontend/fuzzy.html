@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="css/fuzzy.css">
   <link rel="stylesheet" href="css/style.css">
   <script src="js/common.js"></script>
-  <script src="js/fuzzy.js" defer></script>
+  <script src="js/fuzzy.js?v=2" defer></script>
 </head>
 <body>
   <header>
@@ -41,6 +41,7 @@
           </div>
           <div class="game-actions">
             <button id="load-task1-example" class="secondary-btn">Загрузить пример</button>
+            <button id="load-task1-ib-example" class="secondary-btn">Пример по ИБ</button>
             <button id="task1-submit" class="primary-btn">Рассчитать</button>
           </div>
         </div>
@@ -59,7 +60,7 @@
               <input id="term-a1" type="text" value="малый">
             </div>
             <div class="inline-inputs"><input id="a1-a" type="number" value="2" step="0.1"><input id="a1-c" type="number" value="6" step="0.1"></div>
-            <p class="muted">Параметры a, c</p>
+            <p class="muted">Параметры a, c. До a: μ=1; после c: μ=0; между a и c значение убывает линейно.</p>
           </div>
           <div class="term-box">
             <h3>A2 — трапециевидная</h3>
@@ -68,7 +69,7 @@
               <input id="term-a2" type="text" value="средний">
             </div>
             <div class="inline-inputs four"><input id="a2-a" type="number" value="2" step="0.1"><input id="a2-b" type="number" value="4" step="0.1"><input id="a2-c" type="number" value="6" step="0.1"><input id="a2-d" type="number" value="8" step="0.1"></div>
-            <p class="muted">Параметры a, b, c, d</p>
+            <p class="muted">Параметры a, b, c, d. На [b,c]: μ=1; на (a,b) значение растёт; на (c,d) убывает.</p>
           </div>
           <div class="term-box">
             <h3>A3 — S-образная</h3>
@@ -77,18 +78,21 @@
               <input id="term-a3" type="text" value="большой">
             </div>
             <div class="inline-inputs"><input id="a3-a" type="number" value="4" step="0.1"><input id="a3-c" type="number" value="8" step="0.1"></div>
-            <p class="muted">Параметры a, c</p>
+            <p class="muted">Параметры a, c. До a: μ=0; после c: μ=1; между a и c значение растёт линейно.</p>
           </div>
         </div>
 
         <div id="task1-status" class="status"></div>
+        <div id="task1-report-actions" class="report-actions-inline"></div>
         <div id="task1-results" class="result-block" hidden>
           <canvas id="membership-chart" width="1100" height="380"></canvas>
           <div id="x0-values" class="summary-grid"></div>
           <div id="a2-properties" class="summary-grid"></div>
           <h3>Таблица значений</h3>
+          <p class="muted">Значения берутся из функций A1, A2 и A3 в точках x от x_min до x_max с заданным шагом. Столбцы «A2 очень» и «A2 довольно» считаются из A2: μ² и √μ.</p>
           <div class="table-wrap" id="values-table"></div>
           <h3>Операции над A1 и A2</h3>
+          <p class="muted">Операции показаны для пары A1 и A2 как базовый пример сравнения двух нечётких множеств: ¬A1 считается из A1, T-нормы и S-нормы считаются по значениям A1 и A2 в каждой строке таблицы. A3 строится и выводится выше, но в этой таблице не участвует.</p>
           <div class="table-wrap" id="operations-table"></div>
         </div>
       </div>
@@ -102,7 +106,10 @@
             </div>
             <p class="muted">R1: характеристики → специальности, R2: характеристики → кандидаты.</p>
           </div>
-          <button id="load-fuzzy-example" class="secondary-btn">Загрузить пример из методички</button>
+          <div class="game-actions">
+            <button id="load-fuzzy-example" class="secondary-btn">Загрузить пример из методички</button>
+            <button id="load-fuzzy-ib-example" class="secondary-btn">Пример по ИБ</button>
+          </div>
         </div>
 
         <div class="stepper" id="fuzzy-stepper"></div>
@@ -140,11 +147,14 @@
             <button id="task2-submit" class="primary-btn">Вычислить</button>
             <span id="task2-status" class="status"></span>
           </div>
+          <div id="task2-report-actions" class="report-actions-inline"></div>
           <div id="task2-results" class="result-block" hidden>
             <h3>Матрица max-min</h3>
             <div class="table-wrap" id="max-min-table"></div>
             <h3>Матрица max-prod</h3>
             <div class="table-wrap" id="max-prod-table"></div>
+            <h3>Итоговая рекомендация</h3>
+            <div id="task2-recommendations" class="summary-grid"></div>
             <h3>Лучший кандидат для каждой специальности</h3>
             <div class="table-wrap" id="best-table"></div>
             <details class="steps-details">
