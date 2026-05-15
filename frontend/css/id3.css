@@ -15,6 +15,13 @@
     background: var(--color-neutral);
 }
 
+.id3-row-number {
+    width: 48px;
+    background: var(--color-neutral);
+    color: var(--color-text-light);
+    font-weight: 700;
+}
+
 .id3-table input,
 #id3-classifier select,
 #id3-classifier input {

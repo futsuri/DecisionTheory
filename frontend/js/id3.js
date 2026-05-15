@@ -103,17 +103,19 @@ function applyColumns() {
 
 function renderTable() {
     const headers = [...columns, targetName];
+    const numberHead = "<th>№</th>";
     const head = headers.map((header, index) => `
         <th><input class="id3-header-input" data-header-index="${index}" value="${escapeHtml(header)}"></th>
     `).join("");
     const rows = data.map((row, rowIndex) => `
         <tr>
+          <td class="id3-row-number">${rowIndex + 1}</td>
           ${headers.map((_, colIndex) => `
             <td><input type="text" data-row="${rowIndex}" data-col="${colIndex}" value="${escapeHtml(row[colIndex] || "")}"></td>
           `).join("")}
         </tr>
     `).join("");
-    document.getElementById("id3-table").innerHTML = `<table class="id3-table"><tr>${head}</tr>${rows}</table>`;
+    document.getElementById("id3-table").innerHTML = `<table class="id3-table"><tr>${numberHead}${head}</tr>${rows}</table>`;
 }
 
 function readTable() {
@@ -175,7 +177,8 @@ function renderResult(payload, result) {
     const distributionText = Object.entries(distribution)
         .map(([label, count]) => `${label}: ${count}`)
         .join(", ");
-    const rootGain = (result.stats.root_gains || []).find(item => item.feature === result.stats.root_feature);
+    const rootFeature = result.stats.root_feature || result.tree?.feature || "";
+    const rootGain = (result.stats.root_gains || []).find(item => item.feature === rootFeature);
     document.getElementById("id3-summary").innerHTML = [
         card(
             "Начальная энтропия H(S)",
@@ -184,7 +187,7 @@ function renderResult(payload, result) {
         ),
         card(
             "Корневой признак",
-            result.stats.root_feature || "лист",
+            rootFeature || "Дерево состоит из одного листа",
             rootGain ? `Выбран потому, что даёт максимальный IG = ${rootGain.gain}.` : "Все объекты уже относятся к одному классу."
         ),
         card(
