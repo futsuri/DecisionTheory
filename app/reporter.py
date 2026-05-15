@@ -744,7 +744,8 @@ def _report_id3(run_id, payload, result):
     stats = result.get("stats", {})
     distribution = stats.get("class_distribution", {})
     distribution_text = ", ".join(f"{label}: {count}" for label, count in distribution.items()) or "—"
-    root_feature = stats.get("root_feature")
+    tree = result.get("tree", {})
+    root_feature = stats.get("root_feature") or tree.get("feature")
     root_gains = stats.get("root_gains", [])
     root_gain = next((item.get("gain") for item in root_gains if item.get("feature") == root_feature), None)
     target = payload.get("target") or "целевой класс"
