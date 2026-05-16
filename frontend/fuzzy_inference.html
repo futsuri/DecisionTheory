@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ТПР — Нечёткий логический вывод (Мамдани)</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/input.css">
+  <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/fuzzy.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/common.js"></script>
+  <script src="js/fuzzy_inference.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>Нечёткий логический вывод (Мамдани)</h1>
+    <p class="subtitle">Оценка пригодности кандидата через фаззификацию, базу правил, агрегацию и дефаззификацию</p>
+  </header>
+
+  <main>
+    <div class="page-nav">
+      <button onclick="goHome()" class="nav-btn">Главная</button>
+      <button onclick="goHistory()" class="nav-btn">История</button>
+    </div>
+
+    <section class="form-inner game-card">
+      <div class="game-header">
+        <div>
+          <div class="method-header fuzzy-title-row">
+            <h2>Метод Мамдани: пригодность кандидата</h2>
+            <button class="faq-toggle" type="button" id="inference-faq-open" aria-label="FAQ по нечёткому выводу">?</button>
+          </div>
+          <p class="muted">Фаззификация → применение правил → агрегация → дефаззификация центроидом по 201 точке.</p>
+        </div>
+        <div class="game-actions">
+          <button id="load-inference-methodical" class="secondary-btn">Загрузить пример из методички</button>
+          <button id="load-inference-soc" class="secondary-btn">Загрузить пример ИБ/SOC</button>
+        </div>
+      </div>
+
+      <div class="stepper" id="inference-stepper"></div>
+
+      <div class="inference-step-panel active" data-inference-step="1">
+        <div class="grid three-cols">
+          <div class="field"><label>Количество входных ЛП</label><input id="inference-var-count" type="number" min="2" max="10" value="3"></div>
+          <div class="field"><label>Выходная ЛП</label><input id="inference-output-name" type="text" value="Пригодность кандидата" readonly></div>
+          <div class="field"><label>Диапазон выхода</label><input type="text" value="[0, 100]" readonly></div>
+        </div>
+        <button id="apply-inference-vars" class="primary-btn">Применить переменные</button>
+        <div id="inference-vars" class="inference-vars"></div>
+      </div>
+
+      <div class="inference-step-panel" data-inference-step="2">
+        <div class="footer-actions">
+          <button id="add-inference-rule" class="secondary-btn">Добавить правило</button>
+          <span class="muted">От 3 до 20 правил, связка условий только AND = min.</span>
+        </div>
+        <div class="table-wrap" id="inference-rules"></div>
+      </div>
+
+      <div class="inference-step-panel" data-inference-step="3">
+        <div class="field">
+          <label>Имя кандидата</label>
+          <input id="inference-candidate" type="text" value="Петров">
+        </div>
+        <div id="inference-crisp-values" class="inference-crisp-grid"></div>
+        <div class="footer-actions">
+          <button id="inference-submit" class="primary-btn">Вычислить</button>
+          <span id="inference-status" class="status"></span>
+        </div>
+        <div id="inference-report-actions" class="report-actions-inline"></div>
+      </div>
+
+      <div class="inference-step-panel" data-inference-step="4">
+        <div id="inference-results" class="result-block" hidden>
+          <div id="inference-summary" class="summary-grid"></div>
+          <h3>Функции принадлежности входов</h3>
+          <div id="inference-input-charts" class="inference-chart-grid"></div>
+          <canvas id="inference-output-chart" width="1100" height="380"></canvas>
+          <h3>Фаззификация</h3>
+          <div class="table-wrap" id="inference-fuzz-table"></div>
+          <h3>Применение правил</h3>
+          <div class="table-wrap" id="inference-rules-table"></div>
+          <details class="steps-details">
+            <summary>Пошаговый расчёт</summary>
+            <div id="inference-steps"></div>
+          </details>
+        </div>
+      </div>
+
+      <div class="wizard-nav">
+        <button id="inference-prev-step" class="secondary-btn">Назад</button>
+        <button id="inference-next-step" class="secondary-btn">Далее</button>
+      </div>
+    </section>
+
+    <div id="fuzzy-faq-modal" class="faq-modal" hidden>
+      <div class="faq-modal-backdrop" data-faq-close></div>
+      <div class="faq-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="fuzzy-faq-title">
+        <div class="faq-modal-header">
+          <h4 id="fuzzy-faq-title">FAQ: нечёткий логический вывод Мамдани</h4>
+          <button class="faq-modal-close" type="button" data-faq-close aria-label="Закрыть">×</button>
+        </div>
+        <div id="fuzzy-faq-body"></div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

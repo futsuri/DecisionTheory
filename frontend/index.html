@@ -21,51 +21,54 @@
   </header>
 
   <main>
-    <!-- Вставьте это внутрь тега <main> перед <div id="methods-container"> -->
     <section class="task-wizard-card">
         <h2>Мастер подбора решения</h2>
         <div class="wizard-step">
-            <label><strong>1. Опишите вашу задачу кратко:</strong></label>
+            <label><strong>1. Опишите вашу задачу кратко. [beta version]</strong></label>
             <textarea id="task-text" placeholder="Например: построить ID3 по погоде, выбрать средство защиты, оценить риск запуска продукта..." class="wizard-input"></textarea>
         </div>
 
         <div class="wizard-step">
-            <label><strong>2. Уточните условия (выберите все подходящие):</strong></label>
+            <label><strong>2. Уточните главный тип задачи:</strong></label>
             <div class="check-grid">
                 <label class="check-item">
-                    <input type="checkbox" id="param-opponent">
+                    <input type="checkbox" id="param-opponent" data-method-choice="pair_games">
                     <span>Есть активный оппонент / конкурент</span>
                 </label>
                 <label class="check-item">
-                    <input type="checkbox" id="param-uncertainty">
+                    <input type="checkbox" id="param-uncertainty" data-method-choice="nature_games">
                     <span>Высокая неопределенность (погода, рынок)</span>
                 </label>
                 <label class="check-item">
-                    <input type="checkbox" id="param-alternatives">
+                    <input type="checkbox" id="param-alternatives" data-method-choice="ahp">
                     <span>Нужно выбрать один вариант из готового списка</span>
                 </label>
                 <label class="check-item">
-                    <input type="checkbox" id="param-criteria">
+                    <input type="checkbox" id="param-criteria" data-method-choice="multi_criteria">
                     <span>Много противоречивых критериев (цена, качество, срок)</span>
                 </label>
                 <label class="check-item">
-                    <input type="checkbox" id="param-opinion">
+                    <input type="checkbox" id="param-opinion" data-method-choice="ahp">
                     <span>Важно учесть мнение экспертов и их оценки</span>
                 </label>
                 <label class="check-item">
-                    <input type="checkbox" id="param-math">
+                    <input type="checkbox" id="param-math" data-method-choice="multi_criteria">
                     <span>Есть готовые математические функции выгоды</span>
                 </label>
                 <label class="check-item">
-                    <input type="checkbox" id="param-fuzzy">
+                    <input type="checkbox" id="param-fuzzy" data-method-choice="fuzzy_sets">
                     <span>Оценки размытые: низкий / средний / высокий, степени принадлежности</span>
                 </label>
                 <label class="check-item">
-                    <input type="checkbox" id="param-classification">
+                    <input type="checkbox" id="param-fuzzy-inference" data-method-choice="fuzzy_inference">
+                    <span>Есть экспертные правила вида «если условия выполнены, то итог высокий/средний/низкий»</span>
+                </label>
+                <label class="check-item">
+                    <input type="checkbox" id="param-classification" data-method-choice="decision_tree">
                     <span>Есть числовые показатели и понятные пороги для решения</span>
                 </label>
                 <label class="check-item">
-                    <input type="checkbox" id="param-id3">
+                    <input type="checkbox" id="param-id3" data-method-choice="id3">
                     <span>Есть таблица примеров с текстовыми признаками и известным итогом</span>
                 </label>
             </div>

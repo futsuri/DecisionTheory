@@ -21,7 +21,11 @@ from app.reporter import generate_report
 from app.run_service import create_run, list_algorithms
 from app.algorithms.decision_tree import classify_candidates
 from app.algorithms.id3 import build_tree as build_id3_tree, classify_object as classify_id3_object
-from app.algorithms.fuzzy import run_task1 as run_fuzzy_task1, run_task2 as run_fuzzy_task2
+from app.algorithms.fuzzy import (
+    run_inference as run_fuzzy_inference,
+    run_task1 as run_fuzzy_task1,
+    run_task2 as run_fuzzy_task2,
+)
 
 
 def create_app(test_config=None):
@@ -56,6 +60,10 @@ def create_app(test_config=None):
     @app.route("/fuzzy")
     def fuzzy_page():
         return send_from_directory(frontend_dir, "fuzzy.html")
+
+    @app.route("/fuzzy-inference")
+    def fuzzy_inference_page():
+        return send_from_directory(frontend_dir, "fuzzy_inference.html")
 
     @app.route("/decision-tree")
     def decision_tree_page():
@@ -167,6 +175,16 @@ def create_app(test_config=None):
         payload = request.get_json(silent=True) or {}
         try:
             return jsonify(run_fuzzy_task2(payload))
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception as exc:
+            return jsonify({"error": str(exc)}), 500
+
+    @app.route("/api/fuzzy/inference/compute", methods=["POST"])
+    def fuzzy_inference_route():
+        payload = request.get_json(silent=True) or {}
+        try:
+            return jsonify(run_fuzzy_inference(payload))
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
         except Exception as exc:

@@ -64,6 +64,10 @@ def build_report(run_id, algorithm_id, payload, result):
         report = _report_fuzzy_sets(run_id, payload, result)
         _attach_report_files(report, run_id, algorithm_id, payload, result)
         return report
+    if algorithm_id == "fuzzy_inference":
+        report = _report_fuzzy_inference(run_id, payload, result)
+        _attach_report_files(report, run_id, algorithm_id, payload, result)
+        return report
     if algorithm_id == "decision_tree":
         report = _report_decision_tree(run_id, payload, result)
         _attach_report_files(report, run_id, algorithm_id, payload, result)
@@ -696,6 +700,93 @@ def _report_fuzzy_sets(run_id, payload, result):
                 mp.get("value"),
             ])
         markdown.append(_build_md_table(["Специальность", "max-min", "Значение", "max-prod", "Значение"], rows))
+    elif task == "inference":
+        candidate = result.get("candidate_name", source.get("candidate_name", "Кандидат"))
+        crisp_values = result.get("crisp_values", source.get("crisp_values", {}))
+        fuzzification = result.get("fuzzification", {})
+        rules = result.get("rule_results", [])
+        active_rules = [rule for rule in rules if float(rule.get("strength") or 0) > 0]
+        strongest_rules = sorted(active_rules, key=lambda rule: float(rule.get("strength") or 0), reverse=True)[:3]
+        output_score = result.get("defuzzified")
+        interpretation = result.get("interpretation", "—")
+        active_terms = {}
+        for rule in active_rules:
+            term = rule.get("consequent_term", "—")
+            active_terms[term] = max(active_terms.get(term, 0.0), float(rule.get("strength") or 0))
+        support_text = ", ".join(
+            f"{term}: max сила {_fmt_float(strength)}" for term, strength in sorted(active_terms.items(), key=lambda item: item[1], reverse=True)
+        ) or "активных правил нет"
+        markdown.extend([
+            "## Нечёткий логический вывод Мамдани",
+            f"**Кандидат:** {candidate}",
+            f"**Итог:** **{interpretation}** ({_fmt_float(output_score)})",
+            "",
+            "## Вывод",
+            (
+                f"Система активировала {len(active_rules)} правил из {len(rules)}. "
+                f"После агрегации выходных термов и дефаззификации центроидом получена оценка "
+                f"{_fmt_float(output_score)} из 100. Рекомендуемый ответ: **{interpretation}**."
+            ),
+            f"Поддержка выходных термов по активным правилам: {support_text}.",
+            _fuzzy_inference_recommendation_text(interpretation, output_score),
+            "",
+            "### Входные значения",
+            _build_md_table(["Переменная", "Значение"], [[name, _fmt_float(value)] for name, value in crisp_values.items()]),
+            "",
+            "### Фаззификация",
+        ])
+        fuzz_rows = []
+        for var_name, terms in fuzzification.items():
+            for term_name, mu in terms.items():
+                fuzz_rows.append([var_name, term_name, _fmt_float(mu)])
+        markdown.append(_build_md_table(["Переменная", "Терм", "μ"], fuzz_rows))
+        markdown.extend([
+            "",
+            "### Применение правил",
+        ])
+        rule_rows = []
+        for rule in rules:
+            condition = " AND ".join(
+                f"{item.get('var_name')}={item.get('term')} (μ={_fmt_float(item.get('mu'))})"
+                for item in rule.get("antecedents", [])
+            )
+            rule_rows.append([
+                rule.get("index"),
+                condition,
+                rule.get("consequent_term"),
+                _fmt_float(rule.get("strength")),
+            ])
+        markdown.append(_build_md_table(["#", "IF", "THEN", "Сила"], rule_rows))
+        if strongest_rules:
+            markdown.extend([
+                "",
+                "### Правила, которые сильнее всего повлияли на вывод",
+                _build_md_table(
+                    ["#", "Выходной терм", "Сила", "Почему важно"],
+                    [
+                        [
+                            rule.get("index"),
+                            rule.get("consequent_term"),
+                            _fmt_float(rule.get("strength")),
+                            "Это правило задаёт верхний уровень обрезки consequent и напрямую участвует в агрегированной функции.",
+                        ]
+                        for rule in strongest_rules
+                    ],
+                ),
+            ])
+        steps = result.get("steps", {})
+        markdown.extend([
+            "",
+            "### Дефаззификация",
+            "Используется центроид на сетке 201 точка:",
+            "`x̄ = Σ(xᵢ · μᵢ) / Σμᵢ`",
+            f"- Числитель: {_fmt_float(steps.get('numerator'))}",
+            f"- Знаменатель: {_fmt_float(steps.get('denominator'))}",
+            f"- Итог: {_fmt_float(output_score)}",
+            "",
+            "### Почему итог можно принять как решение",
+            "Метод Мамдани не выбирает ответ по одному порогу. Он учитывает все сработавшие экспертные правила, обрезает соответствующие выходные термы по силе активации, объединяет их максимумом и только после этого переводит итоговую нечёткую область в число. Поэтому итоговая оценка отражает совокупную поддержку правил, а не произвольное одиночное условие.",
+        ])
     else:
         markdown.append("Неизвестная подзадача модуля нечётких множеств.")
 
@@ -704,6 +795,35 @@ def _report_fuzzy_sets(run_id, payload, result):
         "algorithm_id": "fuzzy_sets",
         "markdown": "\n".join(markdown),
     }
+
+
+def _report_fuzzy_inference(run_id, payload, result):
+    report = _report_fuzzy_sets(run_id, {"task": "inference", "input": payload}, result)
+    report["algorithm_id"] = "fuzzy_inference"
+    return report
+
+
+def _fuzzy_inference_recommendation_text(interpretation, score):
+    try:
+        numeric_score = float(score)
+    except (TypeError, ValueError):
+        numeric_score = None
+
+    if "Высок" in str(interpretation):
+        detail = "кандидата можно считать предпочтительным для выбранной роли"
+    elif "Сред" in str(interpretation):
+        detail = "кандидат подходит условно: стоит проверить слабые характеристики или усилить требования правилами"
+    elif "Низ" in str(interpretation):
+        detail = "кандидата не стоит выбирать без пересмотра входных оценок или требований"
+    else:
+        detail = "решение требует экспертной проверки"
+
+    if numeric_score is None:
+        return f"Практическая интерпретация: {detail}."
+    return (
+        f"Практическая интерпретация: итоговая оценка {numeric_score:.2f} из 100 означает, "
+        f"что {detail}."
+    )
 
 
 def _report_decision_tree(run_id, payload, result):
@@ -966,9 +1086,13 @@ def _write_report_csv(path, algorithm_id, payload, result):
             for key, block in criteria.items():
                 rec = ", ".join(block.get("recommended_strategies", []) or [])
                 writer.writerow([key, rec, block.get("value"), ""])
-        elif algorithm_id == "fuzzy_sets":
-            task = payload.get("task")
-            source = payload.get("input", {})
+        elif algorithm_id in ("fuzzy_sets", "fuzzy_inference"):
+            if algorithm_id == "fuzzy_inference":
+                task = "inference"
+                source = payload
+            else:
+                task = payload.get("task")
+                source = payload.get("input", {})
             writer.writerow(["task", "", task, ""])
             if task == "task1":
                 writer.writerow(["concept", "", result.get("concept", source.get("concept", "")), ""])
@@ -1003,6 +1127,18 @@ def _write_report_csv(path, algorithm_id, payload, result):
                         for j, value in enumerate(row):
                             specialty = specialties[j] if j < len(specialties) else j + 1
                             writer.writerow([method_key, candidate, specialty, value])
+            elif task == "inference":
+                writer.writerow(["candidate", "", result.get("candidate_name", source.get("candidate_name", "")), ""])
+                writer.writerow(["result", "interpretation", result.get("interpretation"), result.get("defuzzified")])
+                writer.writerow(["", "", "", ""])
+                writer.writerow(["fuzzification", "variable", "term", "mu"])
+                for var_name, terms in result.get("fuzzification", {}).items():
+                    for term_name, mu in terms.items():
+                        writer.writerow(["fuzzification", var_name, term_name, mu])
+                writer.writerow(["", "", "", ""])
+                writer.writerow(["rules", "index", "consequent", "strength"])
+                for rule in result.get("rule_results", []):
+                    writer.writerow(["rule", rule.get("index"), rule.get("consequent_term"), rule.get("strength")])
         elif algorithm_id == "decision_tree":
             thresholds = result.get("thresholds", payload.get("thresholds", {}))
             writer.writerow(["threshold", "T1", thresholds.get("x1"), ""])
@@ -1103,9 +1239,13 @@ def _write_report_pdf(path, algorithm_id, payload, result):
             rec = ", ".join(block.get("recommended_strategies", []) or [])
             value = block.get("value")
             lines.append(f"- {key}: {rec} (значение: {value})")
-    elif algorithm_id == "fuzzy_sets":
-        task = payload.get("task")
-        source = payload.get("input", {})
+    elif algorithm_id in ("fuzzy_sets", "fuzzy_inference"):
+        if algorithm_id == "fuzzy_inference":
+            task = "inference"
+            source = payload
+        else:
+            task = payload.get("task")
+            source = payload.get("input", {})
         lines.append(f"Подзадача: {task}")
         if task == "task1":
             lines.append(f"Понятие: {result.get('concept', source.get('concept', ''))}")
@@ -1128,6 +1268,20 @@ def _write_report_pdf(path, algorithm_id, payload, result):
             lines.append("Лучшие кандидаты max-min:")
             for item in best.get("max_min", []):
                 lines.append(f"- {item.get('specialty')}: {item.get('candidate')} ({item.get('value')})")
+        elif task == "inference":
+            lines.append(f"Кандидат: {result.get('candidate_name', source.get('candidate_name', ''))}")
+            lines.append(f"Итог: {result.get('interpretation')} ({result.get('defuzzified')})")
+            lines.append("")
+            lines.append("Входные значения:")
+            for name, value in result.get("crisp_values", source.get("crisp_values", {})).items():
+                lines.append(f"- {name}: {value}")
+            lines.append("")
+            lines.append("Активные правила:")
+            for rule in result.get("rule_results", []):
+                if float(rule.get("strength") or 0) > 0:
+                    lines.append(f"- #{rule.get('index')}: {rule.get('consequent_term')}, сила {rule.get('strength')}")
+            steps = result.get("steps", {})
+            lines.append(f"Центроид: числитель={steps.get('numerator')}, знаменатель={steps.get('denominator')}")
     elif algorithm_id == "decision_tree":
         thresholds = result.get("thresholds", payload.get("thresholds", {}))
         lines.append(f"T1={thresholds.get('x1')}, T2={thresholds.get('x2')}, T3={thresholds.get('x3')}")

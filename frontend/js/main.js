@@ -28,6 +28,17 @@ const ALGORITHM_RECOMMENDATION_DICTIONARY = [
         reason: "В описании найдены признаки классификации по условиям, порогам или правилам if-else."
     },
     {
+        id: "fuzzy_inference",
+        url: "/fuzzy-inference",
+        label: "Нечёткий логический вывод (Мамдани)",
+        keywords: [
+            "мамдани", "логический вывод", "нечеткий вывод", "нечёткий вывод",
+            "база правил", "если", "то", "фаззификация", "дефаззификация",
+            "пригодность", "оценить кандидата", "кандидат soc", "аналитик soc"
+        ],
+        reason: "В описании найдены экспертные правила с размытыми условиями, поэтому подходит нечёткий логический вывод Мамдани."
+    },
+    {
         id: "fuzzy_sets",
         url: "/fuzzy",
         label: "Нечёткие множества",
@@ -142,6 +153,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 window.location.href = "/fuzzy";
                 return;
             }
+            if (method.id === "fuzzy_inference") {
+                window.location.href = "/fuzzy-inference";
+                return;
+            }
             if (method.id === "decision_tree") {
                 window.location.href = "/decision-tree";
                 return;
@@ -158,6 +173,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         container.appendChild(card);
     });
 
+    initMethodChoiceCheckboxes();
     initTextRecommendationPreview();
 });
 
@@ -169,7 +185,7 @@ function focusMethod(taskType) {
         'selection': ['ahp', 'multi_criteria'], // Для выбора лучшего
         'conflict': ['pair_games'],            // Для конкуренции
         'risk': ['nature_games'],              // Для игр с природой
-        'fuzzy': ['fuzzy_sets'],
+        'fuzzy': ['fuzzy_sets', 'fuzzy_inference'],
         'id3': ['id3'],
         'classification': ['decision_tree']
     };
@@ -197,6 +213,7 @@ function focusMethod(taskType) {
             (id === 'pair_games' && methodTitle.includes('парные')) ||
             (id === 'nature_games' && methodTitle.includes('природой')) ||
             (id === 'fuzzy_sets' && methodTitle.includes('нечёткие')) ||
+            (id === 'fuzzy_inference' && methodTitle.includes('мамдани')) ||
             (id === 'id3' && methodTitle.includes('id3')) ||
             (id === 'decision_tree' && methodTitle.includes('решающее'))
         );
@@ -216,42 +233,31 @@ function focusMethod(taskType) {
     }
 }
 
-document.addEventListener('change', (e) => {
-    const inputs = {
-        opponent: document.getElementById('param-opponent'),
-        nature: document.getElementById('param-uncertainty'),
-        math: document.getElementById('param-math'),
-        expert: document.getElementById('param-opinion')
-    };
+function initMethodChoiceCheckboxes() {
+    document.querySelectorAll("[data-method-choice]").forEach(input => {
+        input.addEventListener("change", () => {
+            if (!input.checked) {
+                updateMethodChoiceState(null);
+                highlightRecommendedMethod(null);
+                return;
+            }
+            document.querySelectorAll("[data-method-choice]").forEach(other => {
+                if (other !== input) other.checked = false;
+            });
+            updateMethodChoiceState(input.dataset.methodChoice);
+            highlightRecommendedMethod(input.dataset.methodChoice);
+        });
+    });
+}
 
-    if (!inputs.opponent || !inputs.nature) return;
-
-    // Функция-помощник для наглядного включения/выключения
-    const toggleField = (element, forceDisable) => {
-        element.disabled = forceDisable;
-        const container = element.closest('.check-item');
-        if (forceDisable) {
-            container.classList.add('disabled');
-            element.checked = false; // сбрасываем галочку, если поле блокируется
-        } else {
-            container.classList.remove('disabled');
-        }
-    };
-
-    // 1. Конфликт: Оппонент vs Природа
-    if (e.target === inputs.opponent) {
-        toggleField(inputs.nature, inputs.opponent.checked);
-    } else if (e.target === inputs.nature) {
-        toggleField(inputs.opponent, inputs.nature.checked);
-    }
-
-    // 2. Конфликт: Математика vs Эксперты
-    if (e.target === inputs.math) {
-        toggleField(inputs.expert, inputs.math.checked);
-    } else if (e.target === inputs.expert) {
-        toggleField(inputs.math, inputs.expert.checked);
-    }
-});
+function updateMethodChoiceState(activeMethod) {
+    document.querySelectorAll("[data-method-choice]").forEach(input => {
+        const item = input.closest(".check-item");
+        const inactive = Boolean(activeMethod) && input.dataset.methodChoice !== activeMethod;
+        item.classList.toggle("disabled", inactive);
+        input.disabled = inactive;
+    });
+}
 
 function analyzeTaskAndRedirect() {
     const p = {
@@ -262,6 +268,7 @@ function analyzeTaskAndRedirect() {
         expert: document.getElementById('param-opinion').checked,
         math: document.getElementById('param-math').checked,
         fuzzy: document.getElementById('param-fuzzy').checked,
+        fuzzyInference: document.getElementById('param-fuzzy-inference').checked,
         classification: document.getElementById('param-classification').checked,
         id3: document.getElementById('param-id3').checked
     };
@@ -282,6 +289,7 @@ function analyzeTaskAndRedirect() {
     if (decision.id) {
         save("algorithm_id", decision.id);
         save("selection_reason", decision.reason);
+        if (decision.tab) save("fuzzy_start_tab", decision.tab);
         window.location.href = decision.url;
     } else {
         alert("Пожалуйста, уточните параметры задачи для подбора метода.");
@@ -289,6 +297,52 @@ function analyzeTaskAndRedirect() {
 }
 
 function detectMethodFromCheckboxes(p) {
+    const selected = document.querySelector("[data-method-choice]:checked");
+    if (selected) {
+        return decisionForMethodChoice(selected.dataset.methodChoice);
+    }
+    return null;
+}
+
+function decisionForMethodChoice(methodId) {
+    const decisions = {
+        pair_games: {
+            id: "pair_games", url: "/pair-game",
+            reason: "В задаче есть активный оппонент, поэтому подходит матричная игра двух лиц."
+        },
+        nature_games: {
+            id: "nature_games", url: "/nature-game",
+            reason: "В задаче ключевую роль играет неопределённость состояний среды, поэтому подходят игры с природой."
+        },
+        ahp: {
+            id: "ahp", url: "/input",
+            reason: "Нужно выбрать лучший вариант по экспертным предпочтениям, поэтому подходит метод анализа иерархий."
+        },
+        multi_criteria: {
+            id: "multi_criteria", url: "/input",
+            reason: "В задаче важны числовые критерии, ограничения или функции полезности, поэтому подходит многокритериальная оптимизация."
+        },
+        fuzzy_sets: {
+            id: "fuzzy_sets", url: "/fuzzy",
+            reason: "Нужно работать с нечёткими множествами, степенями принадлежности или композициями отношений."
+        },
+        fuzzy_inference: {
+            id: "fuzzy_inference", url: "/fuzzy-inference",
+            reason: "Есть экспертные правила с размытыми условиями, поэтому подходит нечёткий логический вывод Мамдани."
+        },
+        decision_tree: {
+            id: "decision_tree", url: "/decision-tree",
+            reason: "Задача формулируется как классификация по числовым пороговым условиям."
+        },
+        id3: {
+            id: "id3", url: "/id3",
+            reason: "Есть обучающая таблица с категориальными признаками и известным целевым классом, поэтому подходит ID3."
+        },
+    };
+    return decisions[methodId] || null;
+}
+
+function detectMethodFromCheckboxesLegacy(p) {
     if (p.id3) {
         return {
             id: "id3", url: "/id3",
@@ -299,6 +353,12 @@ function detectMethodFromCheckboxes(p) {
         return {
             id: "decision_tree", url: "/decision-tree",
             reason: "Задача формулируется как классификация по пороговым условиям, поэтому подходит решающее дерево."
+        };
+    }
+    if (p.fuzzyInference) {
+        return {
+            id: "fuzzy_inference", url: "/fuzzy-inference",
+            reason: "В задаче есть экспертные правила с размытыми условиями, поэтому подходит нечёткий логический вывод Мамдани."
         };
     }
     if (p.fuzzy) {
@@ -352,6 +412,7 @@ function detectMethodFromText(text) {
         url: best.url,
         label: best.label,
         reason: best.reason,
+        tab: best.tab,
         matches: best.matches
     };
 }

@@ -109,6 +109,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                         window.location.href = "/fuzzy";
                         return;
                     }
+                    if (runData.algorithm_id === "fuzzy_inference") {
+                        window.location.href = "/fuzzy-inference";
+                        return;
+                    }
                     if (runData.algorithm_id === "decision_tree") {
                         window.location.href = "/decision-tree";
                         return;

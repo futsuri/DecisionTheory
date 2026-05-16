@@ -109,6 +109,102 @@ def run_task2(payload):
     }
 
 
+def run_inference(payload):
+    candidate_name = str(payload.get("candidate_name") or "Кандидат")
+    input_vars = payload.get("input_vars") or []
+    output_var = payload.get("output_var") or _default_output_var()
+    rules = payload.get("rules") or []
+    crisp_values = payload.get("crisp_values") or {}
+
+    if not isinstance(input_vars, list) or not (2 <= len(input_vars) <= 10):
+        raise ValueError("Нужно задать от 2 до 10 входных лингвистических переменных")
+    if not isinstance(rules, list) or not (3 <= len(rules) <= 20):
+        raise ValueError("База правил должна содержать от 3 до 20 правил")
+
+    variables = [_validate_linguistic_var(item, f"Вход {i + 1}") for i, item in enumerate(input_vars)]
+    output = _validate_linguistic_var(output_var, "Выход")
+    if output["min"] != 0 or output["max"] != 100:
+        raise ValueError("Выходная переменная должна иметь диапазон [0, 100]")
+
+    variable_names = {item["name"] for item in variables}
+    output_terms = {term["name"] for term in output["terms"]}
+    values = {}
+    for var in variables:
+        value = _to_float(crisp_values.get(var["name"]), var["name"])
+        if value < var["min"] or value > var["max"]:
+            raise ValueError(f"{var['name']}: значение должно быть в диапазоне [{var['min']}, {var['max']}]")
+        values[var["name"]] = value
+
+    fuzzification = {}
+    for var in variables:
+        fuzzification[var["name"]] = {
+            term["name"]: _round(_membership(values[var["name"]], term))
+            for term in var["terms"]
+        }
+
+    points = [_round(output["min"] + i * (output["max"] - output["min"]) / 200) for i in range(201)]
+    aggregated = [0.0 for _ in points]
+    rule_results = []
+
+    for index, rule in enumerate(rules, start=1):
+        antecedents = rule.get("antecedents") or []
+        consequent_term = str(rule.get("consequent_term") or "").strip()
+        if not antecedents:
+            raise ValueError(f"Правило {index}: нужно указать хотя бы одно условие")
+        if consequent_term not in output_terms:
+            raise ValueError(f"Правило {index}: неизвестный терм вывода '{consequent_term}'")
+
+        memberships = []
+        normalized_antecedents = []
+        for antecedent in antecedents:
+            var_name = str(antecedent.get("var_name") or "").strip()
+            term_name = str(antecedent.get("term") or "").strip()
+            if var_name not in variable_names:
+                raise ValueError(f"Правило {index}: неизвестная переменная '{var_name}'")
+            if term_name not in fuzzification[var_name]:
+                raise ValueError(f"Правило {index}: неизвестный терм '{term_name}' для '{var_name}'")
+            memberships.append(fuzzification[var_name][term_name])
+            normalized_antecedents.append({"var_name": var_name, "term": term_name, "mu": fuzzification[var_name][term_name]})
+
+        strength = min(memberships) if memberships else 0.0
+        consequent = next(term for term in output["terms"] if term["name"] == consequent_term)
+        clipped = [_round(min(strength, _membership(x, consequent))) for x in points]
+        aggregated = [max(current, clipped_value) for current, clipped_value in zip(aggregated, clipped)]
+        rule_results.append({
+            "index": index,
+            "antecedents": normalized_antecedents,
+            "consequent_term": consequent_term,
+            "strength": _round(strength),
+            "clipped_mu": clipped,
+        })
+
+    denominator = sum(aggregated)
+    defuzzified = sum(x * mu for x, mu in zip(points, aggregated)) / denominator if denominator else 0.0
+    interpretation = _interpret_output(defuzzified, output)
+
+    return {
+        "candidate_name": candidate_name,
+        "input_vars": variables,
+        "output_var": output,
+        "crisp_values": values,
+        "fuzzification": fuzzification,
+        "rule_results": rule_results,
+        "aggregated": {
+            "points": points,
+            "mu": [_round(value) for value in aggregated],
+        },
+        "defuzzified": _round(defuzzified),
+        "interpretation": interpretation,
+        "steps": {
+            "formula": "x̄ = Σ xᵢ·μ(xᵢ) / Σ μ(xᵢ)",
+            "numerator": _round(sum(x * mu for x, mu in zip(points, aggregated))),
+            "denominator": _round(denominator),
+            "points_count": len(points),
+            "rules_count": len(rules),
+        },
+    }
+
+
 def _compose(candidates, characteristics, specialties, r1, r2, method):
     matrix = []
     steps = []
@@ -257,6 +353,93 @@ def _trapezoid(x, a, b, c, d):
     if a < x < b:
         return (x - a) / (b - a)
     return (d - x) / (d - c)
+
+
+def _validate_linguistic_var(value, label):
+    if not isinstance(value, dict):
+        raise ValueError(f"{label}: ожидается объект переменной")
+    name = str(value.get("name") or label).strip()
+    x_min = _to_float(value.get("min"), f"{name}.min")
+    x_max = _to_float(value.get("max"), f"{name}.max")
+    if x_min >= x_max:
+        raise ValueError(f"{name}: min должен быть меньше max")
+    terms = value.get("terms") or []
+    if not isinstance(terms, list) or len(terms) != 3:
+        raise ValueError(f"{name}: нужно задать ровно 3 терма")
+    clean_terms = [_validate_term(term, name) for term in terms]
+    return {"name": name, "min": x_min, "max": x_max, "terms": clean_terms}
+
+
+def _validate_term(value, var_name):
+    if not isinstance(value, dict):
+        raise ValueError(f"{var_name}: терм должен быть объектом")
+    name = str(value.get("name") or "").strip()
+    mf_type = str(value.get("type") or "tri").strip()
+    params = value.get("params") or []
+    if not name:
+        raise ValueError(f"{var_name}: у терма должно быть название")
+    if mf_type not in ("tri", "trap"):
+        raise ValueError(f"{var_name}.{name}: тип должен быть tri или trap")
+    expected = 3 if mf_type == "tri" else 4
+    if not isinstance(params, list) or len(params) != expected:
+        raise ValueError(f"{var_name}.{name}: нужно {expected} параметра")
+    clean_params = [_to_float(item, f"{var_name}.{name}.p{i + 1}") for i, item in enumerate(params)]
+    if any(clean_params[i] > clean_params[i + 1] for i in range(len(clean_params) - 1)):
+        raise ValueError(f"{var_name}.{name}: параметры должны идти по возрастанию")
+    return {"name": name, "type": mf_type, "params": clean_params}
+
+
+def _membership(x, term):
+    params = term["params"]
+    if term["type"] == "tri":
+        return _triangular(x, params[0], params[1], params[2])
+    return _trapezoid_mf(x, params[0], params[1], params[2], params[3])
+
+
+def _triangular(x, a, b, c):
+    if x <= a or x >= c:
+        return 1.0 if (a == b and x == a) or (b == c and x == c) else 0.0
+    if x == b:
+        return 1.0
+    if x < b:
+        return (x - a) / (b - a) if b != a else 1.0
+    return (c - x) / (c - b) if c != b else 1.0
+
+
+def _trapezoid_mf(x, a, b, c, d):
+    if x < a or x > d:
+        return 0.0
+    if b <= x <= c:
+        return 1.0
+    if a <= x < b:
+        return (x - a) / (b - a) if b != a else 1.0
+    if c < x <= d:
+        return (d - x) / (d - c) if d != c else 1.0
+    return 0.0
+
+
+def _default_output_var():
+    return {
+        "name": "Пригодность кандидата",
+        "min": 0,
+        "max": 100,
+        "terms": [
+            {"name": "Низкий", "type": "trap", "params": [0, 0, 30, 45]},
+            {"name": "Средний", "type": "tri", "params": [35, 55, 75]},
+            {"name": "Высокий", "type": "trap", "params": [65, 85, 100, 100]},
+        ],
+    }
+
+
+def _interpret_output(value, output):
+    memberships = [(term["name"], _membership(value, term)) for term in output["terms"]]
+    best_name, _ = max(memberships, key=lambda item: item[1])
+    labels = {
+        "Низкий": "Низкая пригодность",
+        "Средний": "Средняя пригодность",
+        "Высокий": "Высокая пригодность",
+    }
+    return labels.get(best_name, f"{best_name} пригодность")
 
 
 def _t_drastic(a, b):

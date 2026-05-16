@@ -226,6 +226,7 @@ function getMethodNameById(id) {
     pair_games: "Парные игры",
     nature_games: "Игры с природой",
     fuzzy_sets: "Нечёткие множества",
+    fuzzy_inference: "Нечёткий логический вывод (Мамдани)",
     id3: "Алгоритмическое дерево решений (ID3)",
     decision_tree: "Решающее дерево"
   };

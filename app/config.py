@@ -25,6 +25,7 @@ class Config:
         "pair_games",
         "nature_games",
         "fuzzy_sets",
+        "fuzzy_inference",
         "decision_tree",
         "id3",
     }

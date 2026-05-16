@@ -60,6 +60,18 @@
     "available": true
   },
   {
+    "id": "fuzzy_inference",
+    "name": "Нечёткий логический вывод (Мамдани)",
+    "description": "Фаззификация, база правил, агрегация и дефаззификация пригодности кандидата.",
+    "input_schema": {
+      "candidate_name": "str",
+      "input_vars": "list[{name, min, max, terms}]",
+      "rules": "list[{antecedents, consequent_term}]",
+      "crisp_values": "dict[str, float]"
+    },
+    "available": true
+  },
+  {
     "id": "id3",
     "name": "Алгоритмическое дерево решений (ID3)",
     "description": "Построение дерева решений по категориальным признакам через энтропию и информационный выигрыш.",

@@ -11,7 +11,11 @@ from flask import current_app
 from app.algorithms.ahp import run_ahp
 from app.algorithms.decision_tree import classify_candidates
 from app.algorithms.decision_under_uncertainty import run_algorithm as run_nature_games
-from app.algorithms.fuzzy import run_task1 as run_fuzzy_task1, run_task2 as run_fuzzy_task2
+from app.algorithms.fuzzy import (
+    run_inference as run_fuzzy_inference,
+    run_task1 as run_fuzzy_task1,
+    run_task2 as run_fuzzy_task2,
+)
 from app.algorithms.id3 import build_tree as build_id3_tree
 from app.algorithms.multi_criteria import run_multi_criteria
 from app.algorithms.two_player_game import run_algorithm as run_pair_games
@@ -85,6 +89,18 @@ ALGORITHMS = [
         "input_schema": {
             "task1": "membership functions and discretization range",
             "task2": "candidates, characteristics, specialties, R1, R2",
+        },
+        "available": True,
+    },
+    {
+        "id": "fuzzy_inference",
+        "name": "Нечёткий логический вывод (Мамдани)",
+        "description": "Фаззификация, база правил, агрегация и дефаззификация пригодности кандидата.",
+        "input_schema": {
+            "candidate_name": "str",
+            "input_vars": "list[{name, min, max, terms}]",
+            "rules": "list[{antecedents, consequent_term}]",
+            "crisp_values": "dict[str, float]",
         },
         "available": True,
     },
@@ -676,7 +692,11 @@ def _dispatch(algorithm_id, payload):
             return run_fuzzy_task1(payload.get("input", {}))
         if task == "task2":
             return run_fuzzy_task2(payload.get("input", {}))
-        raise ValueError("FuzzySets: task must be 'task1' or 'task2'")
+        if task == "inference":
+            return run_fuzzy_inference(payload.get("input", {}))
+        raise ValueError("FuzzySets: task must be 'task1', 'task2' or 'inference'")
+    if algorithm_id == "fuzzy_inference":
+        return run_fuzzy_inference(payload)
     if algorithm_id == "decision_tree":
         return classify_candidates(payload)
     if algorithm_id == "id3":
